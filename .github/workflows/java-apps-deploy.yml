@@ -1,0 +1,121 @@
+name: Java App CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'java-app/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'java-app/**'
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: ${{ secrets.JAVA_WEBAPP_NAME }}
+  JAVA_VERSION: '17'
+  AZURE_ACR_NAME: ${{ secrets.AZURE_ACR_NAME }}
+
+jobs:
+  build-and-test:
+    name: 'Build and Test Java App'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: maven
+        
+    - name: Build with Maven
+      working-directory: ./java-app
+      run: mvn -B package --file pom.xml
+        
+    - name: Run tests
+      working-directory: ./java-app
+      run: mvn test
+        
+    - name: Generate JaCoCo Report
+      working-directory: ./java-app
+      run: mvn jacoco:report
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: ./java-app/target/site/jacoco/
+        
+    - name: Upload JAR
+      uses: actions/upload-artifact@v3
+      with:
+        name: java-app
+        path: ./java-app/target/*.jar
+
+  build-docker-image:
+    name: 'Build Docker Image'
+    needs: build-and-test
+    if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      
+    - name: Download JAR
+      uses: actions/download-artifact@v3
+      with:
+        name: java-app
+        path: ./java-app/target/
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: ACR Login
+      run: az acr login --name ${{ env.AZURE_ACR_NAME }}
+      
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./java-app
+        push: true
+        tags: |
+          ${{ env.AZURE_ACR_NAME }}.azurecr.io/java-app:${{ github.sha }}
+          ${{ env.AZURE_ACR_NAME }}.azurecr.io/java-app:${{ github.ref == 'refs/heads/main' && 'latest' || 'develop' }}
+        cache-from: type=registry,ref=${{ env.AZURE_ACR_NAME }}.azurecr.io/java-app:buildcache
+        cache-to: type=registry,ref=${{ env.AZURE_ACR_NAME }}.azurecr.io/java-app:buildcache,mode=max
+
+  deploy:
+    name: 'Deploy Java App'
+    needs: build-docker-image
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    
+    steps:
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Deploy to Azure Web App for Containers
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        images: ${{ env.AZURE_ACR_NAME }}.azurecr.io/java-app:${{ github.sha }}
+        
+    - name: Run Health Check
+      run: |
+        # Wait for deployment to complete
+        sleep 60
+        # Run health check - adjust URL as needed
+        curl -sSf https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/actuator/health || exit 1
