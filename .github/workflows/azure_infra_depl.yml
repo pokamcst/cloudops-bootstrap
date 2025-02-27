@@ -1,0 +1,91 @@
+name: Azure Infrastructure Deployment
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'infrastructure/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'infrastructure/**'
+  workflow_dispatch:  # Allows manual triggering
+
+env:
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  AZURE_LOCATION: 'eastus'  # Change as needed
+
+jobs:
+  terraform-plan:
+    name: 'Terraform Plan'
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Terraform Init
+      working-directory: ./infrastructure
+      run: terraform init
+      
+    - name: Terraform Validate
+      working-directory: ./infrastructure
+      run: terraform validate
+
+    - name: Terraform Plan
+      working-directory: ./infrastructure
+      run: terraform plan -out=tfplan
+      
+    - name: Upload Terraform Plan
+      uses: actions/upload-artifact@v3
+      with:
+        name: terraform-plan
+        path: ./infrastructure/tfplan
+        retention-days: 5
+
+  terraform-apply:
+    name: 'Terraform Apply'
+    needs: terraform-plan
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Download Terraform Plan
+      uses: actions/download-artifact@v3
+      with:
+        name: terraform-plan
+        path: ./infrastructure
+
+    - name: Terraform Init
+      working-directory: ./infrastructure
+      run: terraform init
+
+    - name: Terraform Apply
+      working-directory: ./infrastructure
+      run: terraform apply -auto-approve tfplan
