@@ -41,18 +41,18 @@ jobs:
       run: terraform init
       
     - name: Terraform Validate
-      working-directory: ./infrastructure
+      working-directory: ./infra
       run: terraform validate
 
     - name: Terraform Plan
-      working-directory: ./infrastructure
+      working-directory: ./infra
       run: terraform plan -out=tfplan
       
     - name: Upload Terraform Plan
       uses: actions/upload-artifact@v4
       with:
         name: terraform-plan
-        path: ./infrastructure/tfplan
+        path: ./infra/tfplan
         retention-days: 5
 
   terraform-apply:
@@ -80,12 +80,12 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: terraform-plan
-        path: ./infrastructure
+        path: ./infra
 
     - name: Terraform Init
-      working-directory: ./infrastructure
+      working-directory: ./infra
       run: terraform init
 
     - name: Terraform Apply
-      working-directory: ./infrastructure
+      working-directory: ./infra
       run: terraform apply -auto-approve tfplan
