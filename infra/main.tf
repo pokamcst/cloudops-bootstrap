@@ -14,5 +14,5 @@ module "aks" {
 
 module "monitoring" {
   source        = "./modules/monitoring"
-  aks_cluster_id = module.aks.id
+  aks_cluster_id = module.aks.cluster_id
 }
