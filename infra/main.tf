@@ -3,13 +3,16 @@ provider "azurerm" {
 }
 
 module "aks" {
-  source             = "./modules/aks"
-  cluster_name       = "cloudops-cluster"
-  location          = "East US"
-  resource_group     = "cloudops-rg"
-  node_count         = 3
-  node_size          = "Standard_DS2_v2"
-  enable_monitoring  = true
+  source = "./modules/aks" # Adjust this path to match your module location
+
+  # Use the correct variable names as defined in the module
+  # For example, instead of 'cluster_name', the module might expect 'name'
+  name               = "cloudops-cluster"
+  resource_group_name = "cloudops-rg"  # Not 'resource_group'
+  location           = "East US"
+  default_node_count = 3  # Not 'node_count'
+  vm_size            = "Standard_DS2_v2"  # Not 'node_size'
+  # ... other variables
 }
 
 module "monitoring" {
