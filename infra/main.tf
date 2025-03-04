@@ -3,7 +3,7 @@ provider "azurerm" {
 }
 
 module "aks" {
-  source             = "modules/aks"
+  source             = "./modules/aks"
   cluster_name       = "cloudops-cluster"
   location          = "East US"
   resource_group     = "cloudops-rg"
@@ -13,6 +13,6 @@ module "aks" {
 }
 
 module "monitoring" {
-  source        = "modules/monitoring"
+  source        = "./modules/monitoring"
   aks_cluster_id = module.aks.id
 }
