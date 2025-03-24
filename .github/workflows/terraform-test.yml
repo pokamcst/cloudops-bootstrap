@@ -1,0 +1,130 @@
+name: 'Terraform Test'
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-test.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-test.yml'
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+jobs:
+  terraform-test:
+    name: 'Terraform Test'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: "1.5.0"
+
+    - name: Terraform Format
+      id: fmt
+      run: terraform fmt -check
+      continue-on-error: true
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      env:
+        TF_VAR_environment: "test"
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+      env:
+        TF_VAR_environment: "test"
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color -var="environment=test" -out=tfplan
+      env:
+        TF_VAR_environment: "test"
+
+    - name: Terraform Show
+      id: show
+      run: terraform show -json tfplan
+      continue-on-error: true
+
+    - name: Check for sensitive data
+      id: sensitive
+      run: |
+        if grep -r "password\|secret\|key" .; then
+          echo "Sensitive data found in plan"
+          exit 1
+        fi
+      continue-on-error: true
+
+    - name: Terraform Security Check
+      id: security
+      run: |
+        # Install tfsec
+        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+        
+        # Run security check
+        tfsec .
+      continue-on-error: true
+
+    - name: Check for unused variables
+      id: unused
+      run: |
+        # Install tflint
+        curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+        
+        # Run tflint
+        tflint --init
+        tflint
+      continue-on-error: true
+
+    - name: Terraform Module Test
+      id: module-test
+      run: |
+        # Test each module
+        for module in modules/*; do
+          if [ -d "$module" ]; then
+            echo "Testing module: $module"
+            cd $module
+            terraform init
+            terraform validate
+            cd ../..
+          fi
+        done
+      continue-on-error: true
+
+    - name: Check for breaking changes
+      id: breaking
+      run: |
+        # Install terraform-compliance
+        pip install terraform-compliance
+        
+        # Run compliance check
+        terraform-compliance -f tests/terraform-compliance -p tfplan
+      continue-on-error: true
+
+    - name: Output Test Results
+      run: |
+        echo "Format Check: ${{ steps.fmt.outcome }}"
+        echo "Init: ${{ steps.init.outcome }}"
+        echo "Validate: ${{ steps.validate.outcome }}"
+        echo "Plan: ${{ steps.plan.outcome }}"
+        echo "Security Check: ${{ steps.security.outcome }}"
+        echo "Unused Variables: ${{ steps.unused.outcome }}"
+        echo "Module Test: ${{ steps.module-test.outcome }}"
+        echo "Breaking Changes: ${{ steps.breaking.outcome }}" 
