@@ -56,6 +56,36 @@ variable "tags" {
   }
 }
 
+variable "address_space" {
+  description = "Address space for the virtual network"
+  type        = list(string)
+  default     = ["10.0.0.0/16"]
+}
+
+variable "enable_private_endpoints" {
+  description = "Enable private endpoints"
+  type        = bool
+  default     = true
+}
+
+variable "enable_diagnostic_settings" {
+  description = "Enable diagnostic settings"
+  type        = bool
+  default     = true
+}
+
+variable "log_retention_days" {
+  description = "Log retention days"
+  type        = number
+  default     = 30
+}
+
+variable "kubernetes_version" {
+  description = "Kubernetes version"
+  type        = string
+  default     = "1.27.3"
+}
+
 # Resource Group
 resource "azurerm_resource_group" "main" {
   name     = "${var.resource_group_name}-${var.environment}"
@@ -65,36 +95,43 @@ resource "azurerm_resource_group" "main" {
 
 # Call modules
 module "networking" {
-  source              = "./modules/networking"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = var.location
-  environment         = var.environment
-  address_space       = ["10.0.0.0/16"]
-  tags                = var.tags
+  source                   = "./modules/networking"
+  resource_group_name      = azurerm_resource_group.main.name
+  location                 = var.location
+  environment              = var.environment
+  address_space            = var.address_space
+  enable_private_endpoints = var.enable_private_endpoints
+  tags                     = local.common_tags
 }
 
 module "security" {
-  source              = "./modules/security"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = var.location
-  environment         = var.environment
-  virtual_network_id  = module.networking.vnet_id
-  subnet_ids          = module.networking.subnet_ids
-  tags                = var.tags
+  source                     = "./modules/security"
+  resource_group_name        = azurerm_resource_group.main.name
+  location                   = var.location
+  environment                = var.environment
+  virtual_network_id         = module.networking.vnet_id
+  subnet_ids                 = module.networking.subnet_ids
+  enable_diagnostic_settings = var.enable_diagnostic_settings
+  log_retention_days         = var.log_retention_days
+  tags                       = local.common_tags
+  depends_on                 = [module.networking]
 }
 
 module "aks" {
-  source                = "./modules/aks"
-  resource_group_name   = azurerm_resource_group.main.name
-  location              = var.location
-  environment           = var.environment
-  kubernetes_version    = "1.27.3"
-  vnet_subnet_id        = module.networking.aks_subnet_id
-  node_resource_group   = "${var.resource_group_name}-${var.environment}-aks-nodes"
-  key_vault_id          = module.security.key_vault_id
-  user_assigned_identity_id = module.security.aks_identity_id
-  tags                  = var.tags
-  depends_on            = [module.networking, module.security]
+  source                     = "./modules/aks"
+  resource_group_name        = azurerm_resource_group.main.name
+  node_resource_group        = azurerm_resource_group.aks_nodes.name
+  location                   = var.location
+  environment                = var.environment
+  kubernetes_version         = var.kubernetes_version
+  vnet_subnet_id             = module.networking.aks_subnet_id
+  key_vault_id               = module.security.key_vault_id
+  user_assigned_identity_id  = module.security.aks_identity_id
+  node_pools                 = local.aks_node_pools
+  enable_diagnostic_settings = var.enable_diagnostic_settings
+  log_retention_days         = var.log_retention_days
+  tags                       = local.common_tags
+  depends_on                 = [module.networking, module.security]
 }
 
 module "front_door" {
@@ -102,39 +139,49 @@ module "front_door" {
   resource_group_name = azurerm_resource_group.main.name
   environment         = var.environment
   backend_pool_hosts  = [module.aks.ingress_lb_ip]
-  tags                = var.tags
+  tags                = local.common_tags
   depends_on          = [module.aks]
 }
 
 module "storage" {
-  source              = "./modules/storage"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = var.location
-  environment         = var.environment
-  subnet_ids          = module.networking.subnet_ids
+  source                     = "./modules/storage"
+  resource_group_name        = azurerm_resource_group.main.name
+  location                   = var.location
+  environment                = var.environment
+  subnet_ids                 = module.networking.subnet_ids
   private_endpoint_subnet_id = module.networking.pe_subnet_id
-  tags                = var.tags
+  enable_private_endpoints   = var.enable_private_endpoints
+  enable_diagnostic_settings = var.enable_diagnostic_settings
+  log_retention_days         = var.log_retention_days
+  tags                       = local.common_tags
+  depends_on                 = [module.networking]
 }
 
 module "databases" {
-  source              = "./modules/databases"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = var.location
-  environment         = var.environment
-  subnet_ids          = module.networking.subnet_ids
+  source                     = "./modules/databases"
+  resource_group_name        = azurerm_resource_group.main.name
+  location                   = var.location
+  environment                = var.environment
+  subnet_ids                 = module.networking.subnet_ids
   private_endpoint_subnet_id = module.networking.pe_subnet_id
-  tags                = var.tags
+  enable_private_endpoints   = var.enable_private_endpoints
+  enable_diagnostic_settings = var.enable_diagnostic_settings
+  log_retention_days         = var.log_retention_days
+  tags                       = local.common_tags
+  depends_on                 = [module.networking]
 }
 
 module "monitoring" {
-  source              = "./modules/monitoring"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = var.location
-  environment         = var.environment
-  aks_cluster_id      = module.aks.cluster_id
-  workspace_id        = module.security.log_analytics_workspace_id
-  tags                = var.tags
-  depends_on          = [module.aks]
+  source                     = "./modules/monitoring"
+  resource_group_name        = azurerm_resource_group.main.name
+  location                   = var.location
+  environment                = var.environment
+  aks_cluster_id             = module.aks.cluster_id
+  workspace_id               = module.security.log_analytics_workspace_id
+  enable_diagnostic_settings = var.enable_diagnostic_settings
+  log_retention_days         = var.log_retention_days
+  tags                       = local.common_tags
+  depends_on                 = [module.aks, module.security]
 }
 
 # Outputs
