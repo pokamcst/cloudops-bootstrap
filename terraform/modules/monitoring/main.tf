@@ -31,112 +31,46 @@ variable "tags" {
 
 # Application Insights
 resource "azurerm_application_insights" "main" {
-  name                = "appi-photo-${var.environment}"
+  name                = "${var.resource_group_name}-${var.environment}-appinsights"
   location            = var.location
   resource_group_name = var.resource_group_name
   application_type    = "web"
   workspace_id        = var.workspace_id
   tags                = var.tags
-  
-  sampling_percentage = 100
-  retention_in_days   = 90
 }
 
 # Action Group for Alerts
-resource "azurerm_monitor_action_group" "critical" {
-  name                = "ag-critical-${var.environment}"
+resource "azurerm_monitor_action_group" "main" {
+  name                = "${var.resource_group_name}-${var.environment}-actiongroup"
   resource_group_name = var.resource_group_name
-  short_name          = "critical"
-  tags                = var.tags
+  short_name          = "error-alert"
+  enabled             = true
 
   email_receiver {
-    name                    = "ops-team"
-    email_address           = "ops-team@example.com"
-    use_common_alert_schema = true
-  }
-
-  sms_receiver {
-    name         = "oncall"
-    country_code = "1"  # US
-    phone_number = "5551234567"
-  }
-
-  webhook_receiver {
-    name                    = "ServiceNow"
-    service_uri             = "https://servicenow.example.com/api/incidents"
-    use_common_alert_schema = true
+    name          = "admin"
+    email_address = "admin@example.com"
   }
 }
 
 # Alert Rules
-resource "azurerm_monitor_metric_alert" "aks_node_cpu" {
-  name                = "alert-aks-node-cpu-${var.environment}"
+resource "azurerm_monitor_metric_alert" "error_rate" {
+  name                = "${var.resource_group_name}-${var.environment}-error-rate"
   resource_group_name = var.resource_group_name
-  scopes              = [var.aks_cluster_id]
-  description         = "Alert when AKS node CPU usage is high"
-  severity            = 2
+  scopes              = [azurerm_application_insights.main.id]
+  description         = "Alert when error rate exceeds threshold"
+  severity            = 1
   enabled             = true
-  tags                = var.tags
 
   criteria {
-    metric_namespace = "Microsoft.ContainerService/managedClusters"
-    metric_name      = "node_cpu_usage_percentage"
-    aggregation      = "Average"
+    metric_namespace = "Microsoft.Insights/Components"
+    metric_name      = "exceptions/count"
+    aggregation      = "Count"
     operator         = "GreaterThan"
-    threshold        = 80
+    threshold        = 10
   }
 
   action {
-    action_group_id = azurerm_monitor_action_group.critical.id
-  }
-}
-
-resource "azurerm_monitor_metric_alert" "aks_node_memory" {
-  name                = "alert-aks-node-memory-${var.environment}"
-  resource_group_name = var.resource_group_name
-  scopes              = [var.aks_cluster_id]
-  description         = "Alert when AKS node memory usage is high"
-  severity            = 2
-  enabled             = true
-  tags                = var.tags
-
-  criteria {
-    metric_namespace = "Microsoft.ContainerService/managedClusters"
-    metric_name      = "node_memory_working_set_percentage"
-    aggregation      = "Average"
-    operator         = "GreaterThan"
-    threshold        = 80
-  }
-
-  action {
-    action_group_id = azurerm_monitor_action_group.critical.id
-  }
-}
-
-# Log Analytics Query Alerts
-resource "azurerm_monitor_log_alert" "error_rate" {
-  name                = "alert-error-rate-${var.environment}"
-  resource_group_name = var.resource_group_name
-  scopes              = [var.workspace_id]
-  description         = "Alert when error rate is high"
-  severity            = 2
-  enabled             = true
-  tags                = var.tags
-
-  criteria {
-    query       = <<-QUERY
-      requests
-      | where timestamp > ago(5m)
-      | where success == false
-      | summarize count() by bin(timestamp, 5m)
-      | where count_ > 100
-    QUERY
-    time_window = "PT5M"
-    frequency   = "PT5M"
-  }
-
-  action {
-    action_group_id = azurerm_monitor_action_group.critical.id
+    action_group_id = azurerm_monitor_action_group.main.id
   }
 }
 
@@ -207,16 +141,23 @@ resource "azurerm_application_insights_web_test" "global_availability" {
 
 # Outputs
 output "application_insights_id" {
-  value = azurerm_application_insights.main.id
+  description = "The ID of the Application Insights instance"
+  value       = azurerm_application_insights.main.id
+}
+
+output "application_insights_name" {
+  description = "The name of the Application Insights instance"
+  value       = azurerm_application_insights.main.name
 }
 
 output "application_insights_instrumentation_key" {
-  value     = azurerm_application_insights.main.instrumentation_key
-  sensitive = true
+  description = "The instrumentation key for Application Insights"
+  value       = azurerm_application_insights.main.instrumentation_key
+  sensitive   = true
 }
 
 output "action_group_id" {
-  value = azurerm_monitor_action_group.critical.id
+  value = azurerm_monitor_action_group.main.id
 }
 
 output "web_test_ids" {

@@ -19,47 +19,49 @@ variable "tags" {
   type        = map(string)
 }
 
-# Front Door Profile
+# Azure Front Door configuration
+
 resource "azurerm_cdn_frontdoor_profile" "main" {
-  name                = "afd-photo-${var.environment}"
+  name                = "${var.resource_group_name}-${var.environment}-frontdoor"
   resource_group_name = var.resource_group_name
   sku_name            = "Standard_AzureFrontDoor"
-  tags                = var.tags
 }
 
-# Front Door Endpoint
 resource "azurerm_cdn_frontdoor_endpoint" "main" {
-  name                     = "endpoint-photo-${var.environment}"
+  name                     = "${var.resource_group_name}-${var.environment}-endpoint"
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
   enabled                  = true
 }
 
-# Front Door Origin Group
 resource "azurerm_cdn_frontdoor_origin_group" "main" {
-  name                     = "og-photo-${var.environment}"
+  name                     = "${var.resource_group_name}-${var.environment}-origingroup"
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
   session_affinity_enabled = true
+
+  load_balancing {
+    sample_size                 = 4
+    successful_samples_required = 3
+    additional_latency_in_ms    = 0
+  }
 }
 
-# Front Door Origins
 resource "azurerm_cdn_frontdoor_origin" "main" {
-  count                          = length(var.backend_pool_hosts)
-  name                          = "origin-${count.index + 1}-photo-${var.environment}"
+  name                          = "${var.resource_group_name}-${var.environment}-origin"
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.main.id
   enabled                       = true
-  host_name                     = var.backend_pool_hosts[count.index]
+  host_name                     = var.backend_pool_hosts[0]
   http_port                     = 80
   https_port                    = 443
-  priority                      = count.index + 1
+  origin_host_header            = var.backend_pool_hosts[0]
+  priority                      = 1
   weight                        = 1000
 }
 
-# Front Door Route
 resource "azurerm_cdn_frontdoor_route" "main" {
-  name                          = "route-photo-${var.environment}"
+  name                          = "${var.resource_group_name}-${var.environment}-route"
   cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.main.id
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.main.id
-  cdn_frontdoor_origin_ids      = azurerm_cdn_frontdoor_origin.main[*].id
+  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.main.id]
   enabled                       = true
   forwarding_protocol           = "HttpsOnly"
   https_redirect_enabled        = true
@@ -67,15 +69,13 @@ resource "azurerm_cdn_frontdoor_route" "main" {
   supported_protocols          = ["Http", "Https"]
 }
 
-# Front Door Rule Set
 resource "azurerm_cdn_frontdoor_rule_set" "main" {
-  name                     = "ruleset-photo-${var.environment}"
+  name                     = "${var.resource_group_name}-${var.environment}-ruleset"
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
 }
 
-# Front Door Rules
 resource "azurerm_cdn_frontdoor_rule" "security_headers" {
-  name                      = "security-headers"
+  name                      = "${var.resource_group_name}-${var.environment}-securityheaders"
   cdn_frontdoor_rule_set_id = azurerm_cdn_frontdoor_rule_set.main.id
   order                     = 1
   behavior_on_match         = "Continue"
@@ -83,7 +83,7 @@ resource "azurerm_cdn_frontdoor_rule" "security_headers" {
   actions {
     url_rewrite_action {
       source_pattern          = "/"
-      destination            = "/"
+      destination            = "/index.html"
       preserve_unmatched_path = true
     }
 
@@ -113,52 +113,48 @@ resource "azurerm_cdn_frontdoor_rule" "security_headers" {
   }
 }
 
-# Front Door Firewall Policy
 resource "azurerm_cdn_frontdoor_firewall_policy" "main" {
-  name                              = "waf-photo-${var.environment}"
-  cdn_frontdoor_profile_id         = azurerm_cdn_frontdoor_profile.main.id
-  enabled                          = true
-  mode                             = "Prevention"
-  redirect_url                     = "https://www.contoso.com"
-  custom_block_response_status_code = 403
-  custom_block_response_body       = "PGh0bWw+PGJvZHk+PGgxPkFjY2VzcyBEZW5pZWQ8L2gxPjxwPllvdXIgcmVxdWVzdCBoYXMgYmVlbiBibG9ja2VkLjwvcD48L2JvZHk+PC9odG1sPg=="
+  name                = "${var.resource_group_name}-${var.environment}-waf"
+  resource_group_name = var.resource_group_name
+  sku_name            = azurerm_cdn_frontdoor_profile.main.sku_name
+
+  custom_rule {
+    name                           = "BlockIPRange"
+    enabled                        = true
+    priority                       = 1
+    rate_limit_duration_in_minutes = 1
+    rate_limit_threshold          = 10
+    type                          = "IPMatch"
+    action                        = "Block"
+
+    match_condition {
+      match_variable     = "RemoteAddr"
+      operator          = "IPMatch"
+      negation_condition = false
+      match_values      = ["192.168.1.0/24", "10.0.0.0/24"]
+      transforms        = ["Lowercase", "Trim", "UrlDecode"]
+    }
+  }
 
   managed_rule {
     type    = "Microsoft_DefaultRuleSet"
     version = "2.1"
     action  = "Block"
   }
-
-  managed_rule {
-    type    = "Microsoft_BotManagerRuleSet"
-    version = "1.0"
-    action  = "Block"
-  }
-}
-
-# Associate Firewall Policy with Route
-resource "azurerm_cdn_frontdoor_route" "main_with_waf" {
-  name                          = "route-photo-${var.environment}-waf"
-  cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.main.id
-  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.main.id
-  cdn_frontdoor_origin_ids      = azurerm_cdn_frontdoor_origin.main[*].id
-  enabled                       = true
-  forwarding_protocol           = "HttpsOnly"
-  https_redirect_enabled        = true
-  patterns_to_match            = ["/*"]
-  supported_protocols          = ["Http", "Https"]
-  cdn_frontdoor_firewall_policy_ids = [azurerm_cdn_frontdoor_firewall_policy.main.id]
 }
 
 # Outputs
-output "endpoint" {
-  value = azurerm_cdn_frontdoor_endpoint.main.host_name
+output "front_door_id" {
+  description = "The ID of the Front Door profile"
+  value       = azurerm_cdn_frontdoor_profile.main.id
 }
 
-output "profile_id" {
-  value = azurerm_cdn_frontdoor_profile.main.id
+output "front_door_name" {
+  description = "The name of the Front Door profile"
+  value       = azurerm_cdn_frontdoor_profile.main.name
 }
 
-output "firewall_policy_id" {
-  value = azurerm_cdn_frontdoor_firewall_policy.main.id
+output "front_door_endpoint" {
+  description = "The endpoint of the Front Door"
+  value       = azurerm_cdn_frontdoor_endpoint.main.host_name
 } 
