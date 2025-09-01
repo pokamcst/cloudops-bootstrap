@@ -90,7 +90,7 @@ output "application_insights_instrumentation_key" {
   description = "The instrumentation key for Application Insights"
   value       = module.monitoring.application_insights_instrumentation_key
   sensitive   = true
-} 
+}
 
 # Output the storage account key
 output "storage_account_key" {

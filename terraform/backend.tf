@@ -22,7 +22,7 @@ resource "azurerm_storage_account" "terraform_state" {
   location                 = azurerm_resource_group.terraform_state.location
   account_tier             = "Standard"
   account_replication_type = "GRS"
-  min_tls_version         = "TLS1_2"
+  min_tls_version          = "TLS1_2"
   tags = {
     Environment = "Management"
     Project     = "Terraform State"
