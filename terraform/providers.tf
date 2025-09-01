@@ -18,23 +18,35 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.0"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
   }
 
-  backend "azurerm" {
-    resource_group_name  = "terraform-state-rg"
-    storage_account_name = "terraformstateentphoto"
-    container_name       = "tfstate"
-    key                  = "prod.terraform.tfstate"
-  }
+  # Comment out backend configuration temporarily
+  # backend "azurerm" {
+  #   resource_group_name  = "terraform-state-rg"
+  #   storage_account_name = "terraformstateentphoto"
+  #   container_name       = "tfstate"
+  #   key                  = "prod.terraform.tfstate"
+  # }
 }
 
-provider "azurerm" {
-  features {
-    key_vault {
-      purge_soft_delete_on_destroy = true
-    }
-    resource_group {
-      prevent_deletion_if_contains_resources = true
-    }
+# Provider configurations for additional providers
+
+provider "kubernetes" {
+  host                   = module.aks.kube_config.host
+  client_certificate     = base64decode(module.aks.kube_config.client_certificate)
+  client_key             = base64decode(module.aks.kube_config.client_key)
+  cluster_ca_certificate = base64decode(module.aks.kube_config.cluster_ca_certificate)
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.aks.kube_config.host
+    client_certificate     = base64decode(module.aks.kube_config.client_certificate)
+    client_key             = base64decode(module.aks.kube_config.client_key)
+    cluster_ca_certificate = base64decode(module.aks.kube_config.cluster_ca_certificate)
   }
 } 
