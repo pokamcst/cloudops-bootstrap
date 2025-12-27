@@ -1,5 +1,11 @@
 """Tests for item service"""
+import sys
+from pathlib import Path
 import pytest
+
+# Add parent directory to path so app module can be imported
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from app.services.item_service import ItemService
 from app.models.schemas import ItemCreate, ItemUpdate
 

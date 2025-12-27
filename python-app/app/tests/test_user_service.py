@@ -1,5 +1,11 @@
 """Tests for user service"""
+import sys
+from pathlib import Path
 import pytest
+
+# Add parent directory to path so app module can be imported
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from app.services.user_service import UserService
 from app.models.schemas import UserCreate
 

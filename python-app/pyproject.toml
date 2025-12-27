@@ -55,8 +55,9 @@ profile = "black"
 line_length = 120
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["app/tests"]
 python_files = ["test_*.py", "*_test.py"]
+pythonpath = ["."]
 addopts = "--cov=app --cov-report=html --cov-report=term-missing"
 
 [tool.mypy]

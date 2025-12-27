@@ -1,5 +1,11 @@
 """Tests for health check endpoints"""
+import sys
+from pathlib import Path
 from fastapi.testclient import TestClient
+
+# Add parent directory to path so app module can be imported
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from app.main import app
 
 def test_root_endpoint():
