@@ -39,6 +39,11 @@ variable "user_assigned_identity_id" {
   type        = string
 }
 
+variable "log_analytics_workspace_id" {
+  description = "Log Analytics Workspace ID for AKS monitoring"
+  type        = string
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
