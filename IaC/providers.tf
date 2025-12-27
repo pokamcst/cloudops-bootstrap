@@ -20,12 +20,15 @@ terraform {
     }
   }
 
-  backend "azurerm" {
-    resource_group_name  = "terraform-state-rg"
-    storage_account_name = "terraformstate"
-    container_name       = "tfstate"
-    key                  = "kustomer.terraform.tfstate"
-  }
+  # Uncomment and configure the backend after setting up Azure Storage Account
+  # See README.md "Backend Configuration" section for setup instructions
+  # 
+  # backend "azurerm" {
+  #   resource_group_name  = "terraform-state-rg"
+  #   storage_account_name = "terraformstate"
+  #   container_name       = "tfstate"
+  #   key                  = "kustomer.terraform.tfstate"
+  # }
 }
 
 provider "azurerm" {

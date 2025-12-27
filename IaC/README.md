@@ -47,12 +47,59 @@ az account set --subscription <SUBSCRIPTION_ID>
 ### Initialization
 
 ```bash
-# Initialize Terraform
-terraform init
+# Initialize Terraform (without backend initially)
+terraform init -backend=false
 
 # Select/create workspace (optional)
 terraform workspace new dev
 terraform workspace select dev
+```
+
+### Backend Configuration
+
+The default configuration uses local state. To use a remote backend on Azure Storage:
+
+#### Step 1: Create Storage Account for Terraform State
+
+```bash
+# Create resource group
+az group create --name terraform-state-rg --location eastus
+
+# Create storage account
+az storage account create \
+  --resource-group terraform-state-rg \
+  --name terraformstate$(date +%s) \
+  --sku Standard_LRS \
+  --encryption-services blob
+
+# Create container
+az storage container create \
+  --name tfstate \
+  --account-name <STORAGE_ACCOUNT_NAME>
+
+# Note: Save the storage account name and resource group
+```
+
+#### Step 2: Enable Backend in providers.tf
+
+Uncomment the backend block in `providers.tf`:
+
+```terraform
+backend "azurerm" {
+  resource_group_name  = "terraform-state-rg"
+  storage_account_name = "terraformstate"
+  container_name       = "tfstate"
+  key                  = "kustomer.terraform.tfstate"
+}
+```
+
+#### Step 3: Reinitialize Terraform
+
+```bash
+# Initialize with backend configuration
+terraform init
+
+# When prompted, confirm migration to remote backend
 ```
 
 ### Planning & Deployment

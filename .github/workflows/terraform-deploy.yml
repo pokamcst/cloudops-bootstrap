@@ -55,18 +55,10 @@ jobs:
     - name: Terraform Init
       id: init
       run: |
-        # Initialize Terraform
-        terraform init
-        
-        # Initialize each module
-        for module in modules/*; do
-          if [ -d "$module" ]; then
-            echo "Initializing module: $module"
-            cd $module
-            terraform init
-            cd ../..
-          fi
-        done
+        # Initialize Terraform without backend (can be configured later)
+        # To enable remote backend, uncomment backend block in providers.tf
+        # and run: terraform init -backend-config=...
+        terraform init -backend=false
 
     - name: Terraform Validate
       id: validate

@@ -46,7 +46,11 @@ jobs:
 
       - name: Terraform Init
         working-directory: ./IaC
-        run: terraform init
+        run: |
+          # Initialize without backend (can be configured later)
+          # To enable remote backend, uncomment backend block in providers.tf
+          # and run: terraform init -backend-config=...
+          terraform init -backend=false
 
       - name: Terraform Validate
         working-directory: ./IaC
@@ -95,7 +99,11 @@ jobs:
 
       - name: Terraform Init
         working-directory: ./IaC
-        run: terraform init
+        run: |
+          # Initialize without backend (can be configured later)
+          # To enable remote backend, uncomment backend block in providers.tf
+          # and run: terraform init -backend-config=...
+          terraform init -backend=false
 
       - name: Terraform Apply
         working-directory: ./IaC
