@@ -4,25 +4,19 @@ on:
   push:
     branches:
       - main
-      #- develop
-      #- 'feature/**'
-      #- 'feat/**'
     paths:
       - 'infra/**'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'infra/**'
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch:
 
-#permissions:
-#  id-token: write
-#  contents: read
-
-#env:
-#  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-#  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-#  AZURE_LOCATION: 'eastus'  # Change as needed
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
 jobs:
   terraform-plan:
@@ -48,8 +42,9 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Terraform Init
         working-directory: ./infra
@@ -62,11 +57,6 @@ jobs:
       - name: Terraform Plan
         working-directory: ./infra
         run: terraform plan -out=tfplan
-        env:
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
@@ -97,7 +87,9 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
