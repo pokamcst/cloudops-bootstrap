@@ -1,11 +1,12 @@
 # CloudOps Bootstrap
 
-A comprehensive infrastructure-as-code solution for deploying and managing cloud operations infrastructure on Azure.
+A comprehensive infrastructure-as-code solution with application templates for deploying and managing cloud operations on Azure. This bootstrap package enables rapid customer onboarding by providing production-ready infrastructure modules and customizable application templates.
 
 ## Overview
 
-This project provides a complete infrastructure setup for cloud operations, including:
+This project provides a complete cloud operations platform with three integrated layers:
 
+### Infrastructure Layer
 - **Kubernetes Cluster (AKS)**: Managed Kubernetes cluster with node pools
 - **Container Registry (ACR)**: Private container registry for application images
 - **Key Vault**: Secure secrets management
@@ -13,6 +14,16 @@ This project provides a complete infrastructure setup for cloud operations, incl
 - **Monitoring**: Application Insights and Log Analytics
 - **Networking**: Virtual Network with subnets and network security
 - **Identity**: Managed identities and role assignments
+
+### Application Layer - Bootstrap Templates
+- **Java Application**: Spring Boot 3.2 microservice with Maven and JUnit 5
+- **Python Application**: FastAPI microservice with Pydantic validation and pytest
+
+### CI/CD Pipeline
+- Automated testing and containerization
+- Multi-stage Docker builds
+- Azure App Service deployment
+- Health check validation and auto-rollback
 
 ## Infrastructure Components
 
@@ -61,26 +72,31 @@ TF_VAR_environment=test|staging|prod
 ## Project Structure
 
 ```
-.
-├── IaC/                     # Infrastructure as Code (primary)
-│   ├── main.tf              # Main configuration
-│   ├── variables.tf         # Input variables
-│   ├── outputs.tf           # Outputs
-│   ├── providers.tf         # Provider setup
-│   ├── locals.tf            # Local values
-│   ├── terraform.tfvars.example
-│   ├── .gitignore
-│   ├── README.md            # IaC documentation
-│   └── modules/
-│       ├── acr/             # Azure Container Registry
-│       ├── aks/             # Azure Kubernetes Service
-│       ├── databases/       # Cosmos DB & PostgreSQL
-│       ├── monitoring/      # App Insights & Monitoring
-│       ├── networking/      # VNet & Subnets
-│       ├── security/        # Key Vault & Identities
-│       └── storage/         # Storage Account
+cloudops-bootstrap/
+├── IaC/                             # Infrastructure as Code (consolidated)
+│   ├── main.tf                      # Primary Terraform configuration
+│   ├── providers.tf                 # Provider configuration
+│   ├── variables.tf                 # Input variables
+│   ├── outputs.tf                   # Output values
+│   ├── resource_group.tf            # Resource group setup
+│   ├── terraform.tfvars             # Variable values
+│   ├── terraform.tfvars.example     # Variable template
+│   ├── locals.tf                    # Local values
+│   ├── README.md                    # IaC documentation
+│   ├── tests/                       # Terraform compliance tests
+│   │   └── terraform-compliance/
+│   │       └── security.feature
+│   └── modules/                     # Reusable Terraform modules
+│       ├── acr/                     # Azure Container Registry
+│       ├── aks/                     # Azure Kubernetes Service
+│       ├── databases/               # Cosmos DB & PostgreSQL
+│       ├── front_door/              # Azure Front Door
+│       ├── monitoring/              # App Insights & Monitoring
+│       ├── networking/              # VNet & Subnets
+│       ├── security/                # Key Vault & RBAC
+│       └── storage/                 # Storage Account
 │
-├── java-app/                # Kustomer Java Application
+├── java-app/                        # Java Bootstrap Application
 │   ├── src/
 │   │   ├── main/java/com/kustomer/
 │   │   │   ├── KustomerApplication.java
@@ -92,19 +108,55 @@ TF_VAR_environment=test|staging|prod
 │   │   │       └── HealthControllerTest.java
 │   │   └── resources/
 │   │       └── application.properties
-│   ├── pom.xml              # Maven configuration
-│   ├── Dockerfile           # Multi-stage Docker build
-│   ├── .gitignore
-│   └── README.md            # Java app documentation
+│   ├── pom.xml                      # Maven build configuration
+│   ├── Dockerfile                   # Multi-stage Docker build
+│   ├── .dockerignore                # Docker build exclusions
+│   ├── .gitignore                   # Git exclusions
+│   ├── README.md                    # Java app documentation (280+ lines)
+│   └── .env.example                 # Environment configuration template
+│
+├── python-app/                      # Python Bootstrap Application
+│   ├── app/
+│   │   ├── __init__.py              # Package initialization
+│   │   ├── main.py                  # FastAPI application setup
+│   │   ├── config.py                # Pydantic configuration
+│   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   └── schemas.py           # Pydantic data models
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── item_service.py      # Item business logic
+│   │   │   └── user_service.py      # User management
+│   │   ├── routes/
+│   │   │   ├── __init__.py
+│   │   │   ├── health.py            # Health check endpoints
+│   │   │   └── api.py               # Item management endpoints
+│   │   └── tests/
+│   │       ├── conftest.py          # pytest fixtures
+│   │       ├── test_health.py       # Health endpoint tests
+│   │       ├── test_item_service.py # Item service tests
+│   │       └── test_user_service.py # User service tests
+│   ├── Dockerfile                   # Multi-stage Docker build
+│   ├── .dockerignore                # Docker build exclusions
+│   ├── .gitignore                   # Git exclusions
+│   ├── pyproject.toml               # Modern Python packaging
+│   ├── requirements.txt             # Runtime dependencies
+│   ├── requirements-dev.txt         # Development dependencies
+│   ├── README.md                    # Python app documentation (400+ lines)
+│   └── .env.example                 # Environment configuration template
 │
 ├── .github/
 │   └── workflows/
-│       ├── azure_infra_depl.yml      # Infrastructure validation & deployment
-│       ├── terraform-deploy.yml      # Terraform deployment
-│       └── java-apps-deploy.yml      # Java app CI/CD
+│       ├── azure_infra_depl.yml     # Infrastructure validation & deployment
+│       ├── terraform-deploy.yml     # Terraform deployment
+│       ├── java-apps-deploy.yml     # Java app CI/CD pipeline
+│       └── python-apps-deploy.yml   # Python app CI/CD pipeline
 │
-├── CONSOLIDATION_SUMMARY.md # Infrastructure consolidation summary
-└── README.md                # This file
+├── Dockerfile                       # Root Docker configuration
+├── build_custom_image.sh            # Custom image build script
+├── PoC.md                          # Proof of concept documentation
+├── CONSOLIDATION_SUMMARY.md        # Infrastructure consolidation notes
+└── README.md                       # This file
 ```
 
 ## Deployment Workflows
@@ -112,87 +164,205 @@ TF_VAR_environment=test|staging|prod
 ### Infrastructure Deployment
 
 **azure_infra_depl.yml** - Infrastructure Validation & Deployment
-- Triggers on: Changes to `IaC/**/*.tf` files
-- Runs on: `main`, `develop`, and `feature/*` branches
-- Actions:
+- **Triggers**: Changes to `IaC/**/*.tf` files
+- **Branches**: `main`, `develop`, `feature/*`
+- **Actions**:
   - Terraform init, validate, plan
   - Plan artifacts uploaded for review
   - Auto-apply on main/develop branches
+  - Security scanning with Checkov (optional)
 
 **terraform-deploy.yml** - Advanced Terraform Deployment
-- Triggers on: Changes to `IaC/**/*.tf` files
-- Runs on: `main` and `develop` branches
-- Actions:
+- **Triggers**: Changes to `IaC/**/*.tf` files  
+- **Branches**: `main`, `develop`
+- **Actions**:
   - Format check
-  - Validation and security scanning
-  - Plan and apply with detailed output
-  - Environment-specific deployment
+  - Validation and compliance scanning
+  - Environment-specific plan and apply
+  - Detailed deployment output and logging
 
 ### Java Application Deployment
 
 **java-apps-deploy.yml** - Java App CI/CD Pipeline
-- Triggers on: Changes to `java-app/**` or `Dockerfile`
-- Runs on: `main` and `develop` branches
-- Stages:
+- **Triggers**: Changes to `java-app/**` or `Dockerfile` modifications
+- **Branches**: `main`, `develop`
+- **Pipeline Stages**:
+  
   1. **Build & Test**
-     - Setup JDK 17
+     - Setup JDK 17 with Temurin
      - Build with Maven
-     - Run unit tests
+     - Run JUnit 5 unit tests
      - Generate JaCoCo coverage reports
      - Upload test results and JAR artifacts
   
   2. **Build Docker Image**
-     - Download compiled JAR
+     - Download compiled JAR from artifacts
      - Login to Azure Container Registry
-     - Multi-stage Docker build and push
-     - Tag with git SHA and environment
-     - Layer caching for performance
+     - Multi-stage Docker build (builder + runtime)
+     - Push image with SHA and environment tags
+     - Layer caching for improved performance
   
   3. **Deploy**
-     - Deploy to Azure Web App for Containers
-     - Health check validation
-     - Auto-rollback on failure
+     - Deploy to Azure App Service for Containers
+     - Health check validation (/api/health)
+     - Auto-rollback on deployment failure
+     - Verify application startup and readiness
 
-## Java Application
+### Python Application Deployment
 
-The `java-app/` directory contains a production-ready Spring Boot application:
+**python-apps-deploy.yml** - Python App CI/CD Pipeline
+- **Triggers**: Changes to `python-app/**` or `Dockerfile` modifications
+- **Branches**: `main`, `develop`
+- **Pipeline Stages**:
+  
+  1. **Build & Test**
+     - Setup Python 3.10 environment
+     - Install dependencies from requirements.txt
+     - Run pytest test suite
+     - Generate coverage reports
+     - Lint with flake8 and format checks
+     - Upload test artifacts
+  
+  2. **Build Docker Image**
+     - Download test artifacts
+     - Login to Azure Container Registry
+     - Multi-stage Docker build (builder + runtime)
+     - Push image with SHA and environment tags
+     - Optimize layer caching
+  
+  3. **Deploy**
+     - Deploy to Azure App Service for Containers
+     - Health check validation (/api/health)
+     - Auto-rollback on deployment failure
+     - Verify application startup and readiness
 
-### Quick Start
+## Bootstrap Templates - Quick Start Guide
 
+This project is designed as a **reusable bootstrap package** for new customers. When implementing cloud operations for a new customer, follow these steps:
+
+### For New Customers
+
+#### 1. Infrastructure Setup
+- Use the `/IaC` folder as the authoritative infrastructure
+- Customize `terraform.tfvars` with your environment values
+- Run Terraform to deploy Azure resources
+- See `IaC/README.md` for detailed infrastructure documentation
+
+#### 2. Choose Your Application Template
+Select either Java or Python based on your technology stack:
+
+**Option A: Java Application**
+- Copy `java-app/` to your project
+- Customize package names, dependencies, and business logic
+- Follow `java-app/README.md` for development and deployment
+- Uses: Spring Boot 3.2, Maven, JUnit 5, Docker
+
+**Option B: Python Application**
+- Copy `python-app/` to your project  
+- Customize models, services, and routes
+- Follow `python-app/README.md` for development and deployment
+- Uses: FastAPI, Uvicorn, Pydantic, pytest, Docker
+
+#### 3. CI/CD Integration
+- Configure GitHub Actions secrets with your Azure credentials
+- Use provided workflows as templates for your infrastructure
+- Workflows auto-trigger on code and Dockerfile changes
+- See GitHub Actions section below for detailed configuration
+
+#### 4. Customization Points
+
+Each template provides clear customization paths:
+
+**Java Application**
+- Models: Add classes in `src/main/java/com/kustomer/`
+- API Endpoints: Create controllers in `src/main/java/com/kustomer/controller/`
+- Services: Add business logic in `src/main/java/com/kustomer/service/`
+- Tests: Add test classes in `src/test/java/com/kustomer/`
+
+**Python Application**
+- Models: Extend `app/models/schemas.py` with Pydantic classes
+- API Routes: Create route files in `app/routes/`
+- Services: Add business logic in `app/services/`
+- Tests: Add test files in `app/tests/`
+
+### Template Features Included
+
+Both application templates include:
+
+✅ **Health Check Endpoints** - Kubernetes liveness/readiness probes  
+✅ **Configuration Management** - Environment-based configuration  
+✅ **Comprehensive Testing** - Unit and integration tests with coverage  
+✅ **Docker Containerization** - Multi-stage optimized builds  
+✅ **CI/CD Integration** - GitHub Actions workflows  
+✅ **Full Documentation** - 280+ lines (Java), 400+ lines (Python)  
+✅ **Service Architecture** - Separation of concerns  
+✅ **CORS Support** - Cross-origin request handling  
+✅ **API Documentation** - Auto-generated (Python only with Swagger)  
+✅ **Code Quality** - Linting, formatting, type checking
+
+## Detailed Application Documentation
+
+### Java Application
+
+The `java-app/` directory contains a production-ready Spring Boot microservice.
+
+**Quick Start**:
 ```bash
 cd java-app
-
-# Build locally
 mvn clean package
-
-# Run locally
 java -jar target/java-app-1.0.0.jar
-
-# Build Docker image
-docker build -t kustomer-java-app:latest .
-
-# Run in Docker
-docker run -p 8080:8080 kustomer-java-app:latest
 ```
 
-### Available Endpoints
+**Key Features**:
+- Spring Boot 3.2 with Java 17
+- REST API with health checks
+- Unit tests with JUnit 5  
+- Code coverage with JaCoCo
+- Kubernetes-ready with liveness/readiness probes
+- Docker multi-stage build
 
+**Available Endpoints**:
 - `GET /api/health` - Custom health check
 - `GET /actuator/health` - Spring Boot actuator health
 - `GET /actuator/info` - Application information
 - `GET /actuator/metrics` - Application metrics
 
-### Features
+**Documentation**: See `java-app/README.md` (280+ lines with structure, prerequisites, local dev, Docker, CI/CD, Kubernetes deployment, and troubleshooting)
 
-- Spring Boot 3.2 with Java 17
-- REST API with health checks
-- Unit tests with JUnit 5
-- Code coverage with JaCoCo
+### Python Application
+
+The `python-app/` directory contains a production-ready FastAPI microservice.
+
+**Quick Start**:
+```bash
+cd python-app
+python -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+**Key Features**:
+- FastAPI with automatic API documentation
+- Pydantic validation and settings
+- pytest test suite with fixtures
+- Service layer architecture
+- Kubernetes-ready with health probes
 - Docker multi-stage build
-- Container health checks
-- Kubernetes-ready with liveness/readiness probes
 
-For detailed documentation, see `java-app/README.md`
+**Available Endpoints**:
+- `GET /api/health` - Comprehensive health check
+- `GET /api/health/live` - Kubernetes liveness probe
+- `GET /api/health/ready` - Kubernetes readiness probe
+- `GET /docs` - Swagger UI documentation
+- `GET /redoc` - ReDoc documentation
+- `GET /api/items` - Item management endpoints
+- `POST /api/items` - Create item
+- `GET /api/items/{item_id}` - Get item by ID
+- `PUT /api/items/{item_id}` - Update item
+- `DELETE /api/items/{item_id}` - Delete item
+
+**Documentation**: See `python-app/README.md` (400+ lines with structure, prerequisites, local dev, Docker, CI/CD, Kubernetes deployment, monitoring, and troubleshooting)
 
 ## Usage
 
@@ -221,12 +391,23 @@ terraform plan
 terraform apply
 ```
 
-4. Build and Deploy Java App:
+4. Build and Deploy Applications:
+
+**For Java**:
 ```bash
 cd java-app
 mvn clean package
 docker build -t kustomer-java-app:latest .
 # Push to ACR or deploy locally
+```
+
+**For Python**:
+```bash
+cd python-app
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
 ### GitHub Actions Deployment
@@ -237,7 +418,8 @@ docker build -t kustomer-java-app:latest .
    - `AZURE_CLIENT_SECRET`
    - `AZURE_SUBSCRIPTION_ID`
    - `AZURE_TENANT_ID`
-   - `JAVA_WEBAPP_NAME` - Azure Web App name
+   - `JAVA_WEBAPP_NAME` - Azure Web App name (for Java)
+   - `PYTHON_WEBAPP_NAME` - Azure Web App name (for Python)
    - `AZURE_ACR_NAME` - Container registry name
 
 2. Trigger deployment:
@@ -247,8 +429,9 @@ docker build -t kustomer-java-app:latest .
 
 3. Monitor deployments:
    - GitHub Actions tab shows workflow status
-   - Artifacts available for download (test results, JARs)
+   - Artifacts available for download (test results, build artifacts)
    - Deployment logs provide detailed output
+   - Check Azure portal for deployed resources
 
 ## Security Considerations
 

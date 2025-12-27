@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kustomer-python-app"
+version = "1.0.0"
+description = "Kustomer Platform Python Application - FastAPI Backend Service"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Proprietary"}
+authors = [
+    {name = "Kustomer Platform Team", email = "platform@kustomer.com"}
+]
+
+dependencies = [
+    "fastapi==0.109.0",
+    "uvicorn[standard]==0.27.0",
+    "pydantic==2.5.3",
+    "pydantic-settings==2.1.0",
+    "python-dotenv==1.0.0",
+    "httpx==0.25.2",
+    "pytest==7.4.4",
+    "pytest-cov==4.1.0",
+    "pytest-asyncio==0.23.0",
+    "flake8==7.0.0",
+    "black==23.12.1",
+    "isort==5.13.2",
+    "mypy==1.7.1",
+    "watchfiles==0.21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==7.4.4",
+    "pytest-cov==4.1.0",
+    "pytest-asyncio==0.23.0",
+    "black==23.12.1",
+    "flake8==7.0.0",
+    "isort==5.13.2",
+    "mypy==1.7.1",
+    "watchfiles==0.21.0",
+]
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "--cov=app --cov-report=html --cov-report=term-missing"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false

@@ -5,10 +5,22 @@ on:
     branches: [ main, develop ]
     paths:
       - 'python-app/**'
+      - 'python-app/pyproject.toml'
+      - 'python-app/requirements.txt'
+      - 'python-app/requirements-dev.txt'
+      - 'python-app/Dockerfile'
+      - 'python-app/app/config.py'
+      - 'python-app/.env.example'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'python-app/**'
+      - 'python-app/pyproject.toml'
+      - 'python-app/requirements.txt'
+      - 'python-app/requirements-dev.txt'
+      - 'python-app/Dockerfile'
+      - 'python-app/app/config.py'
+      - 'python-app/.env.example'
   workflow_dispatch:
 
 env:
@@ -21,7 +33,7 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -49,7 +61,7 @@ jobs:
         pytest --cov=. --cov-report=xml
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pytest-results
         path: ./python-app/coverage.xml
@@ -61,7 +73,7 @@ jobs:
         python -m build
         
     - name: Upload build artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: python-package
         path: ./python-app/dist/
@@ -75,10 +87,10 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Download Build Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: python-package
         path: ./python-app/dist/
