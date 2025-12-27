@@ -2,7 +2,7 @@ name: Java App CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feature/*]
     paths:
       - 'java-app/**'
   pull_request:

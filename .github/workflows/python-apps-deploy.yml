@@ -2,7 +2,7 @@ name: Python App CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feature/*]
     paths:
       - 'python-app/**'
       - 'python-app/pyproject.toml'
