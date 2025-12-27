@@ -62,44 +62,137 @@ TF_VAR_environment=test|staging|prod
 
 ```
 .
-├── terraform/
-│   ├── main.tf              # Main Terraform configuration
+├── IaC/                     # Infrastructure as Code (primary)
+│   ├── main.tf              # Main configuration
 │   ├── variables.tf         # Input variables
-│   ├── outputs.tf           # Output values
-│   ├── providers.tf         # Provider configuration
-│   ├── locals.tf            # Local variables
-│   ├── resource_group.tf    # Resource group configuration
+│   ├── outputs.tf           # Outputs
+│   ├── providers.tf         # Provider setup
+│   ├── locals.tf            # Local values
+│   ├── terraform.tfvars.example
+│   ├── .gitignore
+│   ├── README.md            # IaC documentation
 │   └── modules/
-│       ├── aks/             # AKS module
-│       ├── monitoring/      # Monitoring module
-│       ├── networking/      # Networking module
-│       └── security/        # Security module
-├── tests/
-│   └── terraform-compliance/
-│       └── security.feature # Security compliance tests
-└── .github/
-    └── workflows/
-        ├── terraform-test.yml    # Test workflow
-        └── terraform-deploy.yml  # Deployment workflow
+│       ├── acr/             # Azure Container Registry
+│       ├── aks/             # Azure Kubernetes Service
+│       ├── databases/       # Cosmos DB & PostgreSQL
+│       ├── monitoring/      # App Insights & Monitoring
+│       ├── networking/      # VNet & Subnets
+│       ├── security/        # Key Vault & Identities
+│       └── storage/         # Storage Account
+│
+├── java-app/                # Kustomer Java Application
+│   ├── src/
+│   │   ├── main/java/com/kustomer/
+│   │   │   ├── KustomerApplication.java
+│   │   │   └── controller/
+│   │   │       └── HealthController.java
+│   │   ├── test/java/com/kustomer/
+│   │   │   ├── KustomerApplicationTests.java
+│   │   │   └── controller/
+│   │   │       └── HealthControllerTest.java
+│   │   └── resources/
+│   │       └── application.properties
+│   ├── pom.xml              # Maven configuration
+│   ├── Dockerfile           # Multi-stage Docker build
+│   ├── .gitignore
+│   └── README.md            # Java app documentation
+│
+├── .github/
+│   └── workflows/
+│       ├── azure_infra_depl.yml      # Infrastructure validation & deployment
+│       ├── terraform-deploy.yml      # Terraform deployment
+│       └── java-apps-deploy.yml      # Java app CI/CD
+│
+├── CONSOLIDATION_SUMMARY.md # Infrastructure consolidation summary
+└── README.md                # This file
 ```
 
 ## Deployment Workflows
 
-### Test Workflow
-The test workflow (`terraform-test.yml`) runs on pull requests and includes:
-- Terraform format check
-- Terraform validation
-- Security scanning (tfsec)
-- Compliance checks
-- Breaking change detection
+### Infrastructure Deployment
 
-### Deployment Workflow
-The deployment workflow (`terraform-deploy.yml`) runs on pushes to main and includes:
-- Environment-specific deployment
-- Pre-deployment validation
-- Security checks
-- Post-deployment verification
-- Status notifications
+**azure_infra_depl.yml** - Infrastructure Validation & Deployment
+- Triggers on: Changes to `IaC/**/*.tf` files
+- Runs on: `main`, `develop`, and `feature/*` branches
+- Actions:
+  - Terraform init, validate, plan
+  - Plan artifacts uploaded for review
+  - Auto-apply on main/develop branches
+
+**terraform-deploy.yml** - Advanced Terraform Deployment
+- Triggers on: Changes to `IaC/**/*.tf` files
+- Runs on: `main` and `develop` branches
+- Actions:
+  - Format check
+  - Validation and security scanning
+  - Plan and apply with detailed output
+  - Environment-specific deployment
+
+### Java Application Deployment
+
+**java-apps-deploy.yml** - Java App CI/CD Pipeline
+- Triggers on: Changes to `java-app/**` or `Dockerfile`
+- Runs on: `main` and `develop` branches
+- Stages:
+  1. **Build & Test**
+     - Setup JDK 17
+     - Build with Maven
+     - Run unit tests
+     - Generate JaCoCo coverage reports
+     - Upload test results and JAR artifacts
+  
+  2. **Build Docker Image**
+     - Download compiled JAR
+     - Login to Azure Container Registry
+     - Multi-stage Docker build and push
+     - Tag with git SHA and environment
+     - Layer caching for performance
+  
+  3. **Deploy**
+     - Deploy to Azure Web App for Containers
+     - Health check validation
+     - Auto-rollback on failure
+
+## Java Application
+
+The `java-app/` directory contains a production-ready Spring Boot application:
+
+### Quick Start
+
+```bash
+cd java-app
+
+# Build locally
+mvn clean package
+
+# Run locally
+java -jar target/java-app-1.0.0.jar
+
+# Build Docker image
+docker build -t kustomer-java-app:latest .
+
+# Run in Docker
+docker run -p 8080:8080 kustomer-java-app:latest
+```
+
+### Available Endpoints
+
+- `GET /api/health` - Custom health check
+- `GET /actuator/health` - Spring Boot actuator health
+- `GET /actuator/info` - Application information
+- `GET /actuator/metrics` - Application metrics
+
+### Features
+
+- Spring Boot 3.2 with Java 17
+- REST API with health checks
+- Unit tests with JUnit 5
+- Code coverage with JaCoCo
+- Docker multi-stage build
+- Container health checks
+- Kubernetes-ready with liveness/readiness probes
+
+For detailed documentation, see `java-app/README.md`
 
 ## Usage
 
@@ -107,7 +200,7 @@ The deployment workflow (`terraform-deploy.yml`) runs on pushes to main and incl
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-org/cloudops-bootstrap.git
+git clone https://github.com/pokamcst/cloudops-bootstrap.git
 cd cloudops-bootstrap
 ```
 
@@ -120,39 +213,51 @@ export ARM_TENANT_ID=your_tenant_id
 export TF_VAR_environment=test
 ```
 
-3. Initialize Terraform:
+3. Deploy Infrastructure:
 ```bash
-cd terraform
-terraform init
-```
-
-4. Plan changes:
-```bash
+cd IaC
+terraform init -backend=false
 terraform plan
+terraform apply
 ```
 
-5. Apply changes:
+4. Build and Deploy Java App:
 ```bash
-terraform apply
+cd java-app
+mvn clean package
+docker build -t kustomer-java-app:latest .
+# Push to ACR or deploy locally
 ```
 
 ### GitHub Actions Deployment
 
 1. Configure GitHub Secrets:
-   - `AZURE_CREDENTIALS`
+   - `AZURE_CREDENTIALS` - Service principal (JSON)
    - `AZURE_CLIENT_ID`
    - `AZURE_CLIENT_SECRET`
    - `AZURE_SUBSCRIPTION_ID`
    - `AZURE_TENANT_ID`
+   - `JAVA_WEBAPP_NAME` - Azure Web App name
+   - `AZURE_ACR_NAME` - Container registry name
 
 2. Trigger deployment:
-   - Push to main branch for automatic deployment
-   - Use manual workflow dispatch for specific environments
+   - Push to `main` branch for automatic infrastructure & app deployment
+   - Push to `develop` branch for staging deployment
+   - Use `workflow_dispatch` for manual trigger to specific environment
+
+3. Monitor deployments:
+   - GitHub Actions tab shows workflow status
+   - Artifacts available for download (test results, JARs)
+   - Deployment logs provide detailed output
 
 ## Security Considerations
 
-- All sensitive data is stored in Azure Key Vault
+- All sensitive data stored in Azure Key Vault
 - Network security groups restrict access
+- Private endpoints for database and storage access
+- Managed identities for Azure authentication
+- Container images scanned for vulnerabilities
+- RBAC controls resource access
 - Private endpoints for Azure services
 - Managed identities for service authentication
 - Regular security scanning and compliance checks
