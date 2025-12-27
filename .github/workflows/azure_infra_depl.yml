@@ -5,11 +5,11 @@ on:
     branches:
       - main
     paths:
-      - 'infra/**'
+      - 'IaC/**'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'infra/**'
+      - 'IaC/**'
   workflow_dispatch:
 
 env:
@@ -45,22 +45,22 @@ jobs:
           creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
       - name: Terraform Init
-        working-directory: ./infra
+        working-directory: ./IaC
         run: terraform init
 
       - name: Terraform Validate
-        working-directory: ./infra
+        working-directory: ./IaC
         run: terraform validate
 
       - name: Terraform Plan
-        working-directory: ./infra
+        working-directory: ./IaC
         run: terraform plan -out=tfplan
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
-          path: ./infra/tfplan
+          path: ./IaC/tfplan
           retention-days: 5
 
   terraform-apply:
@@ -91,12 +91,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan
-          path: ./infra
+          path: ./IaC
 
       - name: Terraform Init
-        working-directory: ./infra
+        working-directory: ./IaC
         run: terraform init
 
       - name: Terraform Apply
-        working-directory: ./infra
+        working-directory: ./IaC
         run: terraform apply -auto-approve tfplan

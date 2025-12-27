@@ -1,0 +1,106 @@
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and customize for your environment
+# NOTE: Never commit terraform.tfvars to git (it contains sensitive information)
+
+# ============================================================================
+# Project Configuration
+# ============================================================================
+
+project_name = "kustomer"
+environment  = "dev"  # Options: dev, staging, prod
+
+# ============================================================================
+# Azure Configuration
+# ============================================================================
+
+location            = "eastus"
+resource_group_name = "kustomer-dev-rg"
+
+# ============================================================================
+# AKS Configuration
+# ============================================================================
+
+kubernetes_version           = "1.27.3"
+aks_node_count              = 2
+aks_node_min_count          = 2
+aks_node_max_count          = 5
+aks_node_vm_size            = "Standard_D4s_v3"
+enable_autoscaling          = true
+enable_azure_keyvault_kms   = true
+
+# ============================================================================
+# ACR Configuration
+# ============================================================================
+
+acr_sku                          = "Standard"  # Options: Basic, Standard, Premium
+acr_admin_enabled                = true
+acr_public_network_access_enabled = false
+
+# ============================================================================
+# Storage Configuration
+# ============================================================================
+
+storage_account_tier             = "Standard"  # Options: Standard, Premium
+storage_account_replication_type = "LRS"       # Options: LRS, GRS, RAGRS, ZRS
+enable_blob_storage              = true
+enable_file_storage              = true
+
+# ============================================================================
+# Database Configuration
+# ============================================================================
+
+# Cosmos DB Configuration
+cosmos_db_throughput = 400  # Request units (min: 400)
+cosmos_db_autoscale  = true
+
+# PostgreSQL Configuration
+postgres_sku_name                = "B_Gen5_2"    # Basic tier for dev
+postgres_version                 = "14"
+postgres_storage_mb              = 51200
+postgres_backup_retention_days   = 7
+postgres_geo_redundant_backup    = false
+postgres_public_network_access   = false
+postgres_ssl_enforcement_enabled = true
+
+# ============================================================================
+# Monitoring Configuration
+# ============================================================================
+
+log_analytics_retention_days = 30  # Range: 0 (unlimited) to 365
+log_analytics_sku            = "PerGB2018"
+
+enable_diagnostic_settings = true
+
+# ============================================================================
+# Network Configuration
+# ============================================================================
+
+vnet_address_space = ["10.0.0.0/16"]
+
+# Subnet configurations
+aks_subnet_address_space              = ["10.0.1.0/24"]
+service_endpoints_subnet_address_space = ["10.0.2.0/24"]
+private_endpoints_subnet_address_space = ["10.0.3.0/24"]
+management_subnet_address_space        = ["10.0.4.0/24"]
+
+# ============================================================================
+# Security Configuration
+# ============================================================================
+
+enable_key_vault                = true
+enable_managed_identity         = true
+enable_private_endpoints        = true
+enable_network_policies         = true
+
+# ============================================================================
+# Tags (Applied to all resources)
+# ============================================================================
+
+tags = {
+  Environment  = "dev"
+  Project      = "kustomer"
+  ManagedBy    = "Terraform"
+  CreatedDate  = "2024-01-01"
+  CostCenter   = "engineering"
+  Owner        = "platform-team"
+}
