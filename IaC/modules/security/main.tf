@@ -135,6 +135,20 @@ resource "azurerm_key_vault_access_policy" "aks" {
   ]
 }
 
+# RBAC Role Assignment for Key Vault - Key Vault Secrets User
+resource "azurerm_role_assignment" "aks_kv_secrets" {
+  scope              = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id       = azurerm_user_assigned_identity.aks.principal_id
+}
+
+# RBAC Role Assignment for current user (for Terraform operations)
+resource "azurerm_role_assignment" "current_user_kv" {
+  scope              = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Administrator"
+  principal_id       = data.azurerm_client_config.current.object_id
+}
+
 # Data source for current client configuration
 data "azurerm_client_config" "current" {}
 

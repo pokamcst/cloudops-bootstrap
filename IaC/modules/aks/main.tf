@@ -129,13 +129,14 @@ resource "azurerm_kubernetes_cluster_node_pool" "backend" {
   }
 }
 
-# Kubernetes Provider
-provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
-}
+# Kubernetes Provider - COMMENTED OUT FOR IMPORT
+# Uncomment this after AKS cluster is created and available
+# provider "kubernetes" {
+#   host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
+#   client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
+#   client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+#   cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+# }
 
 # Kubernetes Namespaces
 resource "kubernetes_namespace" "monitoring" {
