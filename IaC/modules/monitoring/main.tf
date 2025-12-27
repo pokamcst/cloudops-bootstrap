@@ -181,7 +181,7 @@ resource "azurerm_application_insights_web_test" "global_availability" {
   location                = var.location
   resource_group_name     = var.resource_group_name
   application_insights_id = azurerm_application_insights.main.id
-  kind                    = each.key == "api" ? "ping" : "standard"
+  kind                    = each.key == "api" ? "ping" : "multistep"
   frequency               = 300
   timeout                 = 30
   enabled                 = true

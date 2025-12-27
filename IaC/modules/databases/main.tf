@@ -24,6 +24,11 @@ variable "private_endpoint_subnet_id" {
   type        = string
 }
 
+variable "vnet_id" {
+  description = "Virtual Network ID for private endpoints"
+  type        = string
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
@@ -130,13 +135,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "cosmos" {
   name                  = "link-cosmos-${var.environment}"
   resource_group_name   = var.resource_group_name
   private_dns_zone_name = azurerm_private_dns_zone.cosmos.name
-  virtual_network_id    = data.azurerm_virtual_network.vnet.id
-}
-
-# Data source for Virtual Network
-data "azurerm_virtual_network" "vnet" {
-  name                = "vnet-photo-platform-${var.environment}"
-  resource_group_name = var.resource_group_name
+  virtual_network_id    = var.vnet_id
 }
 
 # Outputs

@@ -65,6 +65,7 @@ module "storage" {
   environment                = var.environment
   subnet_ids                 = module.networking.subnet_ids
   private_endpoint_subnet_id = module.networking.aks_subnet_id
+  vnet_id                    = module.networking.vnet_id
   tags                       = local.common_tags
 }
 
@@ -75,6 +76,7 @@ module "databases" {
   environment                = var.environment
   subnet_ids                 = module.networking.subnet_ids
   private_endpoint_subnet_id = module.networking.aks_subnet_id
+  vnet_id                    = module.networking.vnet_id
   tags                       = local.common_tags
 }
 

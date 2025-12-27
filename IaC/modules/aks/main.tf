@@ -180,13 +180,8 @@ output "kube_config" {
 }
 
 output "ingress_lb_ip" {
-  value = data.kubernetes_service.ingress_nginx.status.0.load_balancer.0.ingress.0.ip
-}
-
-# Data source for Ingress Controller IP
-data "kubernetes_service" "ingress_nginx" {
-  metadata {
-    name      = "ingress-nginx-controller"
-    namespace = "ingress-nginx"
-  }
+  description = "Load balancer IP of ingress-nginx controller (available after cluster is ready)"
+  value       = null
+  # Note: To get the ingress LB IP, run after cluster deployment:
+  # kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 } 
