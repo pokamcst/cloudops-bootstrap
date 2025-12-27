@@ -44,19 +44,19 @@ jobs:
       id: init
       run: terraform init
       env:
-        TF_VAR_environment: "test"
+        TF_VAR_environment: "dev"
 
     - name: Terraform Validate
       id: validate
       run: terraform validate
       env:
-        TF_VAR_environment: "test"
+        TF_VAR_environment: "dev"
 
     - name: Terraform Plan
       id: plan
-      run: terraform plan -no-color -var="environment=test" -out=tfplan
+      run: terraform plan -no-color -var="environment=dev" -out=tfplan
       env:
-        TF_VAR_environment: "test"
+        TF_VAR_environment: "dev"
 
     - name: Terraform Show
       id: show
