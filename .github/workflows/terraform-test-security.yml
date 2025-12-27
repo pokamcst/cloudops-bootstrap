@@ -1,4 +1,4 @@
-name: 'Terraform Test'
+name: 'Terraform Test and security checks'
 
 on:
   pull_request:
