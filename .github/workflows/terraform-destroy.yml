@@ -90,13 +90,7 @@ jobs:
         env:
           TF_VAR_environment: ${{ github.event.inputs.environment }}
 
-      - name: Download Destroy Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: destroy-plan-${{ github.event.inputs.environment }}
-          path: ./IaC
-
-      - name: Terraform Apply Destroy
-        run: terraform apply -no-color -auto-approve destroy.tfplan
+      - name: Terraform Destroy
+        run: terraform destroy -no-color -auto-approve -var="environment=${{ github.event.inputs.environment }}"
         env:
           TF_VAR_environment: ${{ github.event.inputs.environment }}
