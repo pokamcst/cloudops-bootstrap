@@ -2,9 +2,12 @@ name: 'Terraform Deploy'
 
 on:
   push:
-    branches: [ main ]
+    branches: 
+      - main
+      - develop
     paths:
-      - 'IaC/**'
+      - 'IaC/**/*.tf'
+      - 'IaC/terraform.tfvars.example'
       - '.github/workflows/terraform-deploy.yml'
   workflow_dispatch:
     inputs:

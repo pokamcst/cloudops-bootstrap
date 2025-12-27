@@ -4,12 +4,18 @@ on:
   push:
     branches:
       - main
+      - develop
+      - feature/*
     paths:
-      - 'IaC/**'
+      - 'IaC/**/*.tf'
+      - 'IaC/terraform.tfvars.example'
+      - 'IaC/.gitignore'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'IaC/**'
+      - 'IaC/**/*.tf'
+      - 'IaC/terraform.tfvars.example'
+      - 'IaC/.gitignore'
   workflow_dispatch:
 
 env:
