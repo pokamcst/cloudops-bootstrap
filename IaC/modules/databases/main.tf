@@ -44,7 +44,8 @@ resource "azurerm_cosmosdb_account" "main" {
   tags               = var.tags
 
   enable_automatic_failover = true
-  enable_multiple_write_locations = true
+  # Serverless accounts do not support multiple write locations
+  enable_multiple_write_locations = false
 
   consistency_policy {
     consistency_level = "Session"

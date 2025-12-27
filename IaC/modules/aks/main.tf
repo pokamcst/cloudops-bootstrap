@@ -79,11 +79,10 @@ resource "azurerm_kubernetes_cluster" "main" {
     load_balancer_sku  = "standard"
     service_cidr       = "172.16.0.0/16"
     dns_service_ip     = "172.16.0.10"
-    docker_bridge_cidr = "172.17.0.1/16"
-  }
+    }
 
   oms_agent {
-    log_analytics_workspace_id = var.key_vault_id
+    log_analytics_workspace_id = var.log_analytics_workspace_id
   }
 
   azure_policy_enabled = true

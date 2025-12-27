@@ -61,11 +61,12 @@ resource "azurerm_monitor_action_group" "critical" {
     phone_number = "5551234567"
   }
 
-  webhook_receiver {
-    name                    = "ServiceNow"
-    service_uri             = "https://servicenow.example.com/api/incidents"
-    use_common_alert_schema = true
-  }
+  # Webhook receiver disabled - configure with valid endpoint
+  # webhook_receiver {
+  #   name                    = "ServiceNow"
+  #   service_uri             = "https://servicenow.example.com/api/incidents"
+  #   use_common_alert_schema = true
+  # }
 }
 
 # Alert Rules
