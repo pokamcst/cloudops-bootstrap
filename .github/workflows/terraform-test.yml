@@ -2,14 +2,14 @@ name: 'Terraform Test'
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop, feature/*]
     paths:
-      - 'terraform/**'
+      - 'IaC/**'
       - '.github/workflows/terraform-test.yml'
   push:
-    branches: [ main ]
+    branches: [ main, develop, feature/*]
     paths:
-      - 'terraform/**'
+      - 'IaC/**'
       - '.github/workflows/terraform-test.yml'
 
 env:
@@ -24,11 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./terraform
+        working-directory: ./IaC
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
