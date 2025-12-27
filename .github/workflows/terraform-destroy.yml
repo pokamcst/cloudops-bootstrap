@@ -20,14 +20,12 @@ env:
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
 jobs:
-  terraform-plan:
-    name: 'Plan Destroy - ${{ github.event.inputs.environment }}'
+  terraform-destroy:
+    name: 'Destroy ${{ github.event.inputs.environment }}'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./IaC
-    outputs:
-      plan-output: ${{ steps.plan.outputs.stdout }}
     
     steps:
       - name: Checkout
@@ -50,47 +48,11 @@ jobs:
 
       - name: Terraform Plan Destroy
         id: plan
-        run: terraform plan -destroy -no-color -var="environment=${{ github.event.inputs.environment }}" -out=destroy.tfplan
-        env:
-          TF_VAR_environment: ${{ github.event.inputs.environment }}
-
-      - name: Upload Destroy Plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: destroy-plan-${{ github.event.inputs.environment }}
-          path: ./IaC/destroy.tfplan
-          retention-days: 7
-
-  terraform-apply-destroy:
-    name: 'Apply Destroy - ${{ github.event.inputs.environment }}'
-    needs: terraform-plan
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./IaC
-    environment:
-      name: destroy-${{ github.event.inputs.environment }}
-    
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: "1.5.0"
-
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
-
-      - name: Terraform Init
-        run: terraform init -backend=false
+        run: terraform plan -destroy -no-color -var="environment=${{ github.event.inputs.environment }}"
         env:
           TF_VAR_environment: ${{ github.event.inputs.environment }}
 
       - name: Terraform Destroy
-        run: terraform destroy -no-color -auto-approve -var="environment=${{ github.event.inputs.environment }}"
+        run: terraform destroy -auto-approve -var="environment=${{ github.event.inputs.environment }}"
         env:
           TF_VAR_environment: ${{ github.event.inputs.environment }}
