@@ -14,8 +14,10 @@ def test_root_endpoint():
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert "message" in data
-    assert data["message"] == "Welcome to Python Bootstrap App"
+    assert "name" in data
+    assert data["name"] == "Kustomer Python App"
+    assert data["status"] == "running"
+    assert data["version"] == "1.0.0"
 
 def test_health_endpoint():
     """Test health check endpoint"""
@@ -33,7 +35,7 @@ def test_health_live_endpoint():
     response = client.get("/api/health/live")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "UP"
+    assert data["status"] == "alive"
 
 def test_health_ready_endpoint():
     """Test readiness probe endpoint"""
@@ -41,7 +43,7 @@ def test_health_ready_endpoint():
     response = client.get("/api/health/ready")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "UP"
+    assert data["status"] == "ready"
 
 def test_invalid_endpoint():
     """Test invalid endpoint returns 404"""
