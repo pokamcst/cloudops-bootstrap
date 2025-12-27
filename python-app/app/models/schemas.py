@@ -32,7 +32,7 @@ class ItemResponse(ItemDB):
 
 class UserBase(BaseModel):
     """Base user model"""
-    email: str = Field(..., regex=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+    email: str = Field(..., pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
     username: str = Field(..., min_length=3, max_length=50)
 
 class UserCreate(UserBase):
