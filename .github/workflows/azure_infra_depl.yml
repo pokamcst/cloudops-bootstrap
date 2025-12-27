@@ -4,25 +4,25 @@ on:
   push:
     branches:
       - main
-      #- develop
-      #- 'feature/**'
-      #- 'feat/**'
+      - develop
+      - feature/*
     paths:
-      - 'infra/**'
+      - 'IaC/**/*.tf'
+      - 'IaC/terraform.tfvars.example'
+      - 'IaC/.gitignore'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'infra/**'
-  workflow_dispatch:  # Allows manual triggering
+      - 'IaC/**/*.tf'
+      - 'IaC/terraform.tfvars.example'
+      - 'IaC/.gitignore'
+  workflow_dispatch:
 
-#permissions:
-#  id-token: write
-#  contents: read
-
-#env:
-#  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-#  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-#  AZURE_LOCATION: 'eastus'  # Change as needed
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
 jobs:
   terraform-plan:
@@ -48,31 +48,29 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
       - name: Terraform Init
-        working-directory: ./infra
-        run: terraform init
+        working-directory: ./IaC
+        run: |
+          # Initialize without backend (can be configured later)
+          # To enable remote backend, uncomment backend block in providers.tf
+          # and run: terraform init -backend-config=...
+          terraform init -backend=false
 
       - name: Terraform Validate
-        working-directory: ./infra
+        working-directory: ./IaC
         run: terraform validate
 
       - name: Terraform Plan
-        working-directory: ./infra
+        working-directory: ./IaC
         run: terraform plan -out=tfplan
-        env:
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
-          path: ./infra/tfplan
+          path: ./IaC/tfplan
           retention-days: 5
 
   terraform-apply:
@@ -97,18 +95,22 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan
-          path: ./infra
+          path: ./IaC
 
       - name: Terraform Init
-        working-directory: ./infra
-        run: terraform init
+        working-directory: ./IaC
+        run: |
+          # Initialize without backend (can be configured later)
+          # To enable remote backend, uncomment backend block in providers.tf
+          # and run: terraform init -backend-config=...
+          terraform init -backend=false
 
       - name: Terraform Apply
-        working-directory: ./infra
+        working-directory: ./IaC
         run: terraform apply -auto-approve tfplan
