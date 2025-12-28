@@ -87,6 +87,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: Request Approval
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.ref.split('/').pop();
+            const environment = branch === 'main' ? 'production' : 'development';
+            console.log(`⏳ Waiting for approval to apply Terraform changes to ${environment} environment`);
+            console.log(`Branch: ${branch}`);
+            console.log(`Run: ${context.runId}`);
+            console.log(`Actor: ${context.actor}`);
+            core.notice(`🔒 Terraform Apply requires manual approval in environment: ${environment}`)
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:

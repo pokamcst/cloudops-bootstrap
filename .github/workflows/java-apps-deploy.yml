@@ -11,6 +11,10 @@ on:
       - 'java-app/**'
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   AZURE_WEBAPP_NAME: ${{ secrets.JAVA_WEBAPP_NAME }}
   JAVA_VERSION: '17'
@@ -79,11 +83,10 @@ jobs:
     - name: Azure Login
       uses: azure/login@v1
       with:
+        auth-type: OIDC
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        
-    - name: ACR Login
       run: az acr login --name ${{ env.AZURE_ACR_NAME }}
       
     - name: Build and Push Docker Image
@@ -107,6 +110,7 @@ jobs:
     - name: Azure Login
       uses: azure/login@v1
       with:
+        auth-type: OIDC
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
