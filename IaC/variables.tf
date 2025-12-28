@@ -22,9 +22,14 @@ variable "resource_group_name" {
 }
 
 variable "project_name" {
-  description = "Project name for resource naming"
+  description = "Project name for resource naming (e.g., 'kustomer', 'kustomerx'). Will create {project_name}-{environment}-rg"
   type        = string
   default     = "kustomer"
+  
+  validation {
+    condition     = length(var.project_name) > 0 && length(var.project_name) <= 20
+    error_message = "Project name must be 1-20 characters."
+  }
 }
 
 variable "tags" {
@@ -113,9 +118,9 @@ variable "acr_admin_enabled" {
 }
 
 variable "acr_public_network_access_enabled" {
-  description = "Enable public network access to ACR"
+  description = "Enable public network access to ACR (only supported with Premium SKU)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # Monitoring Variables

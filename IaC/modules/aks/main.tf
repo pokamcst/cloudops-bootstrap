@@ -39,6 +39,11 @@ variable "user_assigned_identity_id" {
   type        = string
 }
 
+variable "log_analytics_workspace_id" {
+  description = "Log Analytics Workspace ID for AKS monitoring"
+  type        = string
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
@@ -79,11 +84,10 @@ resource "azurerm_kubernetes_cluster" "main" {
     load_balancer_sku  = "standard"
     service_cidr       = "172.16.0.0/16"
     dns_service_ip     = "172.16.0.10"
-    docker_bridge_cidr = "172.17.0.1/16"
-  }
+    }
 
   oms_agent {
-    log_analytics_workspace_id = var.key_vault_id
+    log_analytics_workspace_id = var.log_analytics_workspace_id
   }
 
   azure_policy_enabled = true
@@ -125,13 +129,14 @@ resource "azurerm_kubernetes_cluster_node_pool" "backend" {
   }
 }
 
-# Kubernetes Provider
-provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
-}
+# Kubernetes Provider - COMMENTED OUT FOR IMPORT
+# Uncomment this after AKS cluster is created and available
+# provider "kubernetes" {
+#   host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
+#   client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
+#   client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+#   cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+# }
 
 # Kubernetes Namespaces
 resource "kubernetes_namespace" "monitoring" {

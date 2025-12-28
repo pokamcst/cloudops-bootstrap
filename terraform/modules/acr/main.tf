@@ -9,8 +9,7 @@ resource "azurerm_container_registry" "main" {
   sku                 = var.acr_sku
   admin_enabled       = var.admin_enabled
   
-  # public_network_access_enabled only supported with Premium SKU
-  public_network_access_enabled = var.acr_sku == "Premium" ? var.public_network_access_enabled : true
+  public_network_access_enabled = var.public_network_access_enabled
   
   tags = var.tags
 }

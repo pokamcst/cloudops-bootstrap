@@ -54,7 +54,6 @@ module "aks" {
   kubernetes_version  = var.kubernetes_version
   vnet_subnet_id      = module.networking.aks_subnet_id
   key_vault_id        = module.security.key_vault_id
-  log_analytics_workspace_id = module.security.log_analytics_workspace_id
   user_assigned_identity_id = module.security.aks_identity_id
   tags                = local.common_tags
 }
@@ -66,7 +65,6 @@ module "storage" {
   environment                = var.environment
   subnet_ids                 = module.networking.subnet_ids
   private_endpoint_subnet_id = module.networking.aks_subnet_id
-  vnet_id                    = module.networking.vnet_id
   tags                       = local.common_tags
 }
 
@@ -77,7 +75,6 @@ module "databases" {
   environment                = var.environment
   subnet_ids                 = module.networking.subnet_ids
   private_endpoint_subnet_id = module.networking.aks_subnet_id
-  vnet_id                    = module.networking.vnet_id
   tags                       = local.common_tags
 }
 
