@@ -1,54 +1,3 @@
-# Variables
-variable "resource_group_name" {
-  description = "Name of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-}
-
-variable "kubernetes_version" {
-  description = "Kubernetes version"
-  type        = string
-}
-
-variable "vnet_subnet_id" {
-  description = "Subnet ID for AKS nodes"
-  type        = string
-}
-
-variable "node_resource_group" {
-  description = "Resource group for AKS nodes"
-  type        = string
-}
-
-variable "key_vault_id" {
-  description = "Key Vault ID for AKS secrets"
-  type        = string
-}
-
-variable "user_assigned_identity_id" {
-  description = "User Assigned Identity ID for AKS"
-  type        = string
-}
-
-variable "log_analytics_workspace_id" {
-  description = "Log Analytics Workspace ID for AKS monitoring"
-  type        = string
-}
-
-variable "tags" {
-  description = "Tags to apply to resources"
-  type        = map(string)
-}
-
 # AKS Cluster
 resource "azurerm_kubernetes_cluster" "main" {
   name                = "aks-photo-${var.environment}"
@@ -59,7 +8,7 @@ resource "azurerm_kubernetes_cluster" "main" {
   tags                = var.tags
 
   identity {
-    type = "UserAssigned"
+    type         = "UserAssigned"
     identity_ids = [var.user_assigned_identity_id]
   }
 
@@ -79,12 +28,12 @@ resource "azurerm_kubernetes_cluster" "main" {
   }
 
   network_profile {
-    network_plugin     = "azure"
-    network_policy     = "azure"
-    load_balancer_sku  = "standard"
-    service_cidr       = "172.16.0.0/16"
-    dns_service_ip     = "172.16.0.10"
-    }
+    network_plugin    = "azure"
+    network_policy    = "azure"
+    load_balancer_sku = "standard"
+    service_cidr      = "172.16.0.0/16"
+    dns_service_ip    = "172.16.0.10"
+  }
 
   oms_agent {
     log_analytics_workspace_id = var.log_analytics_workspace_id
@@ -102,13 +51,13 @@ resource "azurerm_kubernetes_cluster" "main" {
 resource "azurerm_kubernetes_cluster_node_pool" "frontend" {
   name                  = "frontend"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
-  vm_size              = "Standard_D4s_v3"
-  node_count           = 3
-  vnet_subnet_id       = var.vnet_subnet_id
-  enable_auto_scaling  = true
-  min_count            = 3
-  max_count            = 10
-  os_disk_size_gb      = 100
+  vm_size               = "Standard_D4s_v3"
+  node_count            = 3
+  vnet_subnet_id        = var.vnet_subnet_id
+  enable_auto_scaling   = true
+  min_count             = 3
+  max_count             = 10
+  os_disk_size_gb       = 100
   node_labels = {
     "nodepool-type" = "frontend"
   }
@@ -117,26 +66,17 @@ resource "azurerm_kubernetes_cluster_node_pool" "frontend" {
 resource "azurerm_kubernetes_cluster_node_pool" "backend" {
   name                  = "backend"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
-  vm_size              = "Standard_D8s_v3"
-  node_count           = 2
-  vnet_subnet_id       = var.vnet_subnet_id
-  enable_auto_scaling  = true
-  min_count            = 2
-  max_count            = 5
-  os_disk_size_gb      = 100
+  vm_size               = "Standard_D8s_v3"
+  node_count            = 2
+  vnet_subnet_id        = var.vnet_subnet_id
+  enable_auto_scaling   = true
+  min_count             = 2
+  max_count             = 5
+  os_disk_size_gb       = 100
   node_labels = {
     "nodepool-type" = "backend"
   }
 }
-
-# Kubernetes Provider - COMMENTED OUT FOR IMPORT
-# Uncomment this after AKS cluster is created and available
-# provider "kubernetes" {
-#   host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
-#   client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
-#   client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
-#   cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
-# }
 
 # Kubernetes Namespaces
 resource "kubernetes_namespace" "monitoring" {
@@ -169,24 +109,3 @@ resource "kubernetes_network_policy" "default_deny" {
     policy_types = ["Ingress", "Egress"]
   }
 }
-
-# Outputs
-output "cluster_name" {
-  value = azurerm_kubernetes_cluster.main.name
-}
-
-output "cluster_id" {
-  value = azurerm_kubernetes_cluster.main.id
-}
-
-output "kube_config" {
-  value     = azurerm_kubernetes_cluster.main.kube_config_raw
-  sensitive = true
-}
-
-output "ingress_lb_ip" {
-  description = "Load balancer IP of ingress-nginx controller (available after cluster is ready)"
-  value       = null
-  # Note: To get the ingress LB IP, run after cluster deployment:
-  # kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-} 

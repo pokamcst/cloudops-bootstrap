@@ -1,144 +1,8 @@
 # =============================================================================
-# FinOps Module - Azure Cost Management & Optimization
+# FinOps Module - Resources
 # =============================================================================
-# This module implements FinOps practices including:
-# - Budget alerts per resource group and subscription
-# - Cost anomaly detection
-# - Resource tagging enforcement via Azure Policy
-# - Scheduled actions for cost reports
-# - Advisor recommendations monitoring
+# Budget alerts, cost anomaly detection, tagging policies, cost exports
 # =============================================================================
-
-# Variables
-variable "resource_group_name" {
-  description = "Name of the resource group"
-  type        = string
-}
-
-variable "resource_group_id" {
-  description = "ID of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-}
-
-variable "subscription_id" {
-  description = "Azure Subscription ID"
-  type        = string
-}
-
-variable "tags" {
-  description = "Tags to apply to resources"
-  type        = map(string)
-}
-
-# Budget Configuration
-variable "monthly_budget_amount" {
-  description = "Monthly budget amount in the subscription currency (e.g., EUR or USD)"
-  type        = number
-  default     = 1000
-}
-
-variable "budget_currency" {
-  description = "Currency for budget (ISO 4217 code)"
-  type        = string
-  default     = "EUR"
-}
-
-variable "budget_alert_thresholds" {
-  description = "List of budget alert thresholds in percentage (0-100)"
-  type        = list(number)
-  default     = [50, 75, 90, 100, 110]
-}
-
-variable "budget_alert_emails" {
-  description = "Email addresses for budget alerts"
-  type        = list(string)
-  default     = ["finops@example.com"]
-}
-
-variable "cost_anomaly_alert_emails" {
-  description = "Email addresses for cost anomaly alerts"
-  type        = list(string)
-  default     = ["finops@example.com"]
-}
-
-variable "enable_subscription_budget" {
-  description = "Enable subscription-level budget"
-  type        = bool
-  default     = true
-}
-
-variable "subscription_monthly_budget" {
-  description = "Monthly budget for the entire subscription"
-  type        = number
-  default     = 5000
-}
-
-variable "enable_tagging_policy" {
-  description = "Enable Azure Policy for mandatory tagging"
-  type        = bool
-  default     = true
-}
-
-variable "required_tags" {
-  description = "List of tags that must be present on all resources"
-  type        = list(string)
-  default     = ["Environment", "CostCenter", "Owner", "Project", "ManagedBy"]
-}
-
-variable "enable_cost_anomaly_alerts" {
-  description = "Enable cost anomaly detection alerts"
-  type        = bool
-  default     = true
-}
-
-variable "enable_advisor_recommendations" {
-  description = "Enable Azure Advisor cost recommendations monitoring"
-  type        = bool
-  default     = true
-}
-
-variable "cost_report_schedule" {
-  description = "Cron expression for scheduled cost reports (weekly default)"
-  type        = string
-  default     = "0 8 * * 1" # Every Monday at 8:00 AM
-}
-
-variable "project_name" {
-  description = "Project name for resource naming"
-  type        = string
-}
-
-# =============================================================================
-# Local values
-# =============================================================================
-locals {
-  budget_name_prefix = "${var.project_name}-${var.environment}"
-
-  # Budget start: first day of current month
-  budget_start_date = formatdate("YYYY-MM-01'T'00:00:00Z", timestamp())
-  
-  # Budget end: 3 years from now
-  budget_end_date = formatdate("YYYY-MM-01'T'00:00:00Z", timeadd(timestamp(), "26280h"))
-
-  # Environment-specific budget multipliers
-  budget_multiplier = {
-    dev     = 1.0
-    staging = 1.5
-    prod    = 3.0
-  }
-
-  effective_budget = var.monthly_budget_amount * lookup(local.budget_multiplier, var.environment, 1.0)
-}
 
 # =============================================================================
 # Resource Group Budget
@@ -157,12 +21,11 @@ resource "azurerm_consumption_budget_resource_group" "main" {
 
   filter {
     tag {
-      name = "Environment"
+      name   = "Environment"
       values = [var.environment]
     }
   }
 
-  # Generate notification blocks for each threshold
   dynamic "notification" {
     for_each = toset(var.budget_alert_thresholds)
     content {
@@ -170,7 +33,6 @@ resource "azurerm_consumption_budget_resource_group" "main" {
       threshold      = notification.value
       operator       = "GreaterThan"
       threshold_type = notification.value <= 100 ? "Actual" : "Forecasted"
-
       contact_emails = var.budget_alert_emails
     }
   }
@@ -200,7 +62,6 @@ resource "azurerm_consumption_budget_subscription" "main" {
       threshold      = notification.value
       operator       = "GreaterThan"
       threshold_type = notification.value <= 100 ? "Actual" : "Forecasted"
-
       contact_emails = var.budget_alert_emails
     }
   }
@@ -252,8 +113,7 @@ resource "azurerm_monitor_activity_log_alert" "advisor_cost" {
   tags                = var.tags
 
   criteria {
-    category = "Recommendation"
-
+    category      = "Recommendation"
     resource_type = "Microsoft.Advisor/recommendations"
   }
 
@@ -321,7 +181,7 @@ resource "azurerm_subscription_cost_management_export" "daily" {
   recurrence_period_end_date   = local.budget_end_date
 
   export_data_storage_location {
-    container_id = azurerm_storage_container.cost_exports.resource_manager_id
+    container_id     = azurerm_storage_container.cost_exports.resource_manager_id
     root_folder_path = "cost-exports/${var.environment}"
   }
 
@@ -349,42 +209,4 @@ resource "azurerm_storage_container" "cost_exports" {
   name                  = "cost-exports"
   storage_account_name  = azurerm_storage_account.finops.name
   container_access_type = "private"
-}
-
-# =============================================================================
-# Outputs
-# =============================================================================
-output "resource_group_budget_id" {
-  description = "Resource Group budget ID"
-  value       = azurerm_consumption_budget_resource_group.main.id
-}
-
-output "subscription_budget_id" {
-  description = "Subscription budget ID"
-  value       = var.enable_subscription_budget ? azurerm_consumption_budget_subscription.main[0].id : null
-}
-
-output "cost_anomaly_alert_id" {
-  description = "Cost anomaly alert ID"
-  value       = var.enable_cost_anomaly_alerts ? azurerm_cost_anomaly_alert.main[0].id : null
-}
-
-output "finops_action_group_id" {
-  description = "FinOps action group ID"
-  value       = azurerm_monitor_action_group.finops.id
-}
-
-output "finops_storage_account_name" {
-  description = "Storage account for cost exports"
-  value       = azurerm_storage_account.finops.name
-}
-
-output "effective_monthly_budget" {
-  description = "Effective monthly budget after environment multiplier"
-  value       = local.effective_budget
-}
-
-output "tagging_policy_assignments" {
-  description = "Tag policy assignment IDs"
-  value       = { for k, v in azurerm_resource_group_policy_assignment.require_tag : k => v.id }
 }
