@@ -61,10 +61,10 @@ resource "azurerm_monitor_action_group" "critical" {
     phone_number = "5551234567"
   }
 
-  # Webhook receiver disabled - configure with valid endpoint
+  # Webhook receiver — uncomment and configure with your ServiceNow/PagerDuty endpoint
   # webhook_receiver {
   #   name                    = "ServiceNow"
-  #   service_uri             = "https://servicenow.example.com/api/incidents"
+  #   service_uri             = var.webhook_url
   #   use_common_alert_schema = true
   # }
 }
@@ -182,7 +182,7 @@ resource "azurerm_application_insights_web_test" "global_availability" {
   location                = var.location
   resource_group_name     = var.resource_group_name
   application_insights_id = azurerm_application_insights.main.id
-  kind                    = each.key == "api" ? "ping" : "multistep"
+  kind                    = each.key == "api" ? "ping" : "standard"
   frequency               = 300
   timeout                 = 30
   enabled                 = true
