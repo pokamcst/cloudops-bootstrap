@@ -8,15 +8,7 @@
 # - Compliance and governance
 # =============================================================================
 
-variable "project_name" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
+# NOTE: project_name and environment are declared in main.tf
 
 variable "cost_center" {
   description = "Cost center code for chargeback"
