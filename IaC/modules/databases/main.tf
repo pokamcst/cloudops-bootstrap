@@ -1,51 +1,14 @@
-# Variables
-variable "resource_group_name" {
-  description = "Name of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "Map of subnet IDs"
-  type        = map(string)
-}
-
-variable "private_endpoint_subnet_id" {
-  description = "Subnet ID for private endpoints"
-  type        = string
-}
-
-variable "vnet_id" {
-  description = "Virtual Network ID for private endpoints"
-  type        = string
-}
-
-variable "tags" {
-  description = "Tags to apply to resources"
-  type        = map(string)
-}
-
 # Cosmos DB Account
 resource "azurerm_cosmosdb_account" "main" {
   name                = "cosmos-photo-${var.environment}"
   location            = var.location
   resource_group_name = var.resource_group_name
-  offer_type         = "Standard"
-  kind               = "GlobalDocumentDB"
-  tags               = var.tags
+  offer_type          = "Standard"
+  kind                = "GlobalDocumentDB"
+  tags                = var.tags
 
-  enable_automatic_failover = true
-  # Serverless accounts do not support multiple write locations
-  enable_multiple_write_locations = false
+  enable_automatic_failover           = true
+  enable_multiple_write_locations     = false
 
   consistency_policy {
     consistency_level = "Session"
@@ -66,7 +29,7 @@ resource "azurerm_cosmosdb_account" "main" {
   }
 
   network_acl_bypass_for_azure_services = true
-  network_acl_bypass_ids               = []
+  network_acl_bypass_ids                = []
 }
 
 # Cosmos DB Database
@@ -116,7 +79,7 @@ resource "azurerm_private_endpoint" "cosmos" {
     name                           = "psc-cosmos-${var.environment}"
     private_connection_resource_id = azurerm_cosmosdb_account.main.id
     is_manual_connection           = false
-    subresource_names             = ["Sql"]
+    subresource_names              = ["Sql"]
   }
 
   private_dns_zone_group {
@@ -138,39 +101,3 @@ resource "azurerm_private_dns_zone_virtual_network_link" "cosmos" {
   private_dns_zone_name = azurerm_private_dns_zone.cosmos.name
   virtual_network_id    = var.vnet_id
 }
-
-# Outputs
-output "cosmos_db_id" {
-  value = azurerm_cosmosdb_account.main.id
-}
-
-output "cosmos_db_endpoint" {
-  value = azurerm_cosmosdb_account.main.endpoint
-}
-
-output "cosmos_db_connection_strings" {
-  value     = azurerm_cosmosdb_account.main.connection_strings
-  sensitive = true
-}
-
-output "cosmos_db_primary_key" {
-  value     = azurerm_cosmosdb_account.main.primary_key
-  sensitive = true
-}
-
-output "cosmos_db_secondary_key" {
-  value     = azurerm_cosmosdb_account.main.secondary_key
-  sensitive = true
-}
-
-output "cosmos_db_database_name" {
-  value = azurerm_cosmosdb_sql_database.main.name
-}
-
-output "cosmos_db_containers" {
-  value = {
-    users  = azurerm_cosmosdb_sql_container.users.name
-    albums = azurerm_cosmosdb_sql_container.albums.name
-    photos = azurerm_cosmosdb_sql_container.photos.name
-  }
-} 

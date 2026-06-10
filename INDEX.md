@@ -15,6 +15,8 @@ This is a comprehensive cloud operations bootstrap package with production-ready
 | **Infrastructure** | IaC setup and deployment | `IaC/README.md` |
 | **Java App** | Spring Boot application guide | `java-app/README.md` |
 | **Python App** | FastAPI application guide | `python-app/README.md` |
+| **FinOps Konzept** | Cloud Financial Operations Konzept & Architektur | `FINOPS_CONCEPT.md` |
+| **FinOps Guide** | Produktions- & Enterprise-Anleitung | `FINOPS_PRODUCTION_GUIDE.md` |
 
 ## 🏗️ Project Architecture
 
@@ -40,6 +42,7 @@ CloudOps Bootstrap
 - ✅ Networking (VNet, subnets, security)
 - ✅ Security (Key Vault, RBAC, managed identities)
 - ✅ Front Door for load balancing
+- ✅ **FinOps** (Budgets, Cost Alerts, Anomaly Detection, Tagging Policies, Cost Exports)
 
 ### Java Application
 - ✅ Spring Boot 3.2 with Java 17

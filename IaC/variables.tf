@@ -193,3 +193,72 @@ variable "postgres_storage_mb" {
   type        = number
   default     = 32768
 }
+
+# =============================================================================
+# FinOps Variables
+# =============================================================================
+
+variable "finops_monthly_budget" {
+  description = "Monthly budget amount per resource group (in budget currency)"
+  type        = number
+  default     = 1000
+
+  validation {
+    condition     = var.finops_monthly_budget > 0
+    error_message = "Monthly budget must be greater than 0."
+  }
+}
+
+variable "finops_budget_currency" {
+  description = "Budget currency (ISO 4217 code)"
+  type        = string
+  default     = "EUR"
+}
+
+variable "finops_alert_thresholds" {
+  description = "Budget alert thresholds in percent. Thresholds >100 use forecasted cost."
+  type        = list(number)
+  default     = [50, 75, 90, 100, 110]
+}
+
+variable "finops_alert_emails" {
+  description = "Email addresses for FinOps budget and anomaly alerts"
+  type        = list(string)
+  default     = ["finops@example.com"]
+}
+
+variable "finops_enable_subscription_budget" {
+  description = "Enable subscription-level budget monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "finops_subscription_budget" {
+  description = "Monthly budget for the entire Azure subscription"
+  type        = number
+  default     = 5000
+}
+
+variable "finops_enable_tagging_policy" {
+  description = "Enable Azure Policy to enforce mandatory cost tags"
+  type        = bool
+  default     = true
+}
+
+variable "finops_required_tags" {
+  description = "Tags required on all resources for cost tracking"
+  type        = list(string)
+  default     = ["Environment", "CostCenter", "Owner", "Project", "ManagedBy"]
+}
+
+variable "finops_enable_anomaly_alerts" {
+  description = "Enable Azure Cost Anomaly Detection"
+  type        = bool
+  default     = true
+}
+
+variable "finops_enable_advisor_alerts" {
+  description = "Enable alerts for Azure Advisor cost recommendations"
+  type        = bool
+  default     = true
+}

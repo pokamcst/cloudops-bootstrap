@@ -90,3 +90,32 @@ module "monitoring" {
   workspace_id        = module.security.log_analytics_workspace_id
   tags                = local.common_tags
 }
+
+# FinOps - Cost Management & Optimization
+module "finops" {
+  source              = "./modules/finops"
+  resource_group_name = azurerm_resource_group.main.name
+  resource_group_id   = azurerm_resource_group.main.id
+  location            = var.location
+  environment         = var.environment
+  project_name        = var.project_name
+  subscription_id     = data.azurerm_subscription.current.subscription_id
+  tags                = local.common_tags
+
+  # Budget Configuration
+  monthly_budget_amount       = var.finops_monthly_budget
+  budget_currency             = var.finops_budget_currency
+  budget_alert_thresholds     = var.finops_alert_thresholds
+  budget_alert_emails         = var.finops_alert_emails
+  cost_anomaly_alert_emails   = var.finops_alert_emails
+
+  # Feature Toggles
+  enable_subscription_budget    = var.finops_enable_subscription_budget
+  subscription_monthly_budget   = var.finops_subscription_budget
+  enable_tagging_policy         = var.finops_enable_tagging_policy
+  enable_cost_anomaly_alerts    = var.finops_enable_anomaly_alerts
+  enable_advisor_recommendations = var.finops_enable_advisor_alerts
+  required_tags                 = var.finops_required_tags
+}
+
+data "azurerm_subscription" "current" {}
