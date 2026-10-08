@@ -9,7 +9,7 @@
 | Ticket | Thema | Status | Nächster Schritt |
 |---|---|---|---|
 | [VNGIA-227](#vngia-227--az_tooling--az_capabilities-acr--compute-gallery) | Shared-Subscription → AZ_Capabilities (ACR + Compute Gallery) | 🔄 Plan validiert, Apply ausstehend | Pipeline erneut laufen lassen (Timeout war transient) |
-| [VNGIA-228](#vngia-228--automation--az_configuration) | Automation-Subscription → AZ_Configuration | 🔄 Ziel-Repo und CAF3-Management vorbereitet; Migration offen | Configuration-Spoke, Runbook-/RBAC-Migration und Test-/Prod-Validierung |
+| [VNGIA-228](#vngia-228--automation--az_configuration) | Automation-Subscription → AZ_Configuration | ⛔ Plan durch verwaiste Monitoring-Provider-Aliase blockiert | Monitoring-State-Ownership klären, dann Configuration-Test-/Prod-Plan |
 | [VNGIA-347](#vngia-347--adoc-projekte-auf-zentrales-modul-umstellen) | 4 ADO-Projekte auf `module_azure_devops` umstellen | 📋 Nicht begonnen | Terraform-Code für Cluster/Autotrader/Fileshare/Pentaho schreiben |
 | [VNGIA-488](#vngia-488--az_monitoring-repo-migration) | AZ_Monitoring Repo-Migration (Git-Historie) | ✅ Migration fertig, Pipeline-Test offen | Pipeline testen, Variable Groups ggf. anlegen |
 
@@ -111,12 +111,20 @@ Plan: 9 to add, 0 to change, 0 to destroy
 
 ### Todo VNGIA-228
 
-1. [ ] **Landing Zone vervollständigen:** Configuration-Spoke in `AZ_CAF_Level3_Spokes` ergänzen; CIDR/IPAM, Peering, Routen, Firewall/NSG, Policies, RBAC und Private Endpoints abstimmen. `landing_zone_provisioned` bis zum erfolgreichen Rollout `false` lassen.
-2. [ ] **Altbestand inventarisieren:** Automation Accounts, Runbooks, Schedules, Automation Variables/Secrets, Managed Identities, Service Principals, Role Assignments und Renovate-Ressourcen der Quell-Subscription erfassen; jeden Bestandteil einem Ziel oder einer bewussten Stilllegung zuordnen.
-3. [ ] **Migration implementieren:** AppReg-Expiry-Runbook samt täglichem Schedule sowie bestätigte Housekeeping-/Maintenance-Prozesse migrieren; keine Shared Keys oder Tokens im Terraform-Code ablegen. Identity/RBAC gezielt und minimal berechtigen.
-4. [ ] **Betrieb validieren:** Test- und Prod-Pläne getrennt prüfen; Pipeline-Verbindungen und Variable Groups verifizieren; Automation Account, SOC-/Resource-Diagnostics, Runbook-Ausführung und Berechtigungen mit fachlichen Smoke-Tests bestätigen.
-5. [ ] **Cutover und Abschaltung:** Zeitplan und Rückfallplan mit dem Plattformteam festlegen; alte Automation-Subscription erst nach erfolgreicher Abnahme und Freigabe stilllegen.
-6. [ ] **Ansible-Zielbild klären:** festhalten, welche Netzwerk-, Identity-, Worker- und Betriebsanforderungen für eine spätere Ansible-Nutzung vorbereitet werden sollen; Ansible selbst ist derzeit nicht implementiert.
+#### Jetzt vorbereiten (Spoke-unabhängig)
+
+1. [ ] **Management-Plan-Blocker klären:** Terraform meldet verwaiste Monitoring-State-Objekte mit den entfernten Provider-Aliasen `monitoring_test`/`monitoring_prod`. Ownership mit dem Team klären und den State-/Provider-Zustand kontrolliert bereinigen; bis dahin keinen Apply ausführen.
+2. [ ] **Altbestand aufnehmen:** Quell-Subscription und Repo auf Automation Accounts, Runbooks, Schedules, Variablen/Connections, Managed Identities, Service Principals, Role Assignments und Renovate-Ressourcen prüfen; zusätzlich Live-Inventar gegen Terraform-Code abgleichen.
+3. [ ] **Migrationsmatrix erstellen:** für jeden gefundenen Bestandteil Ziel, verantwortliches Team, Abhängigkeiten, Geheimnisquelle und Testnachweis festlegen. AppReg-Expiry-Runbook und täglicher Schedule sind im Quellcode belegt; Shared Keys dürfen nicht als Klartext übernommen werden.
+4. [ ] **ADO-Betrieb verifizieren:** Service Connections `Terraform-test`/`Terraform-prod`, Subscription-Zuordnung, Pipeline-Autorisierung, Variable Groups und Zugriff auf `AZ_Infrastructure/AZ_Pipeline` bestätigen.
+5. [ ] **SOC-Logging-Ownership entscheiden:** `AZ_Configuration` und CAF3 Management definieren beide Activity-Log-Weiterleitung zum SOC Event Hub. Festlegen, welches System Eigentümer der Subscription-Diagnostic-Setting ist, um Doppelrouten zu vermeiden.
+6. [ ] **Cutover vorbereiten:** Abnahmekriterien, Rückfallplan, Verantwortliche und Voraussetzungen für die spätere Stilllegung der alten Automation-Subscription vereinbaren. Ansible bleibt ein separates Zielbild; es ist derzeit nicht implementiert.
+
+#### Nach Deployment des Configuration-Spokes
+
+1. [ ] **Landing Zone vervollständigen:** Configuration-Spoke in `AZ_CAF_Level3_Spokes` deployen; CIDR/IPAM, Peering, Routen, Firewall/NSG, Policies, RBAC und Private Connectivity prüfen. `landing_zone_provisioned` bis zum erfolgreichen Spoke-Rollout `false` lassen.
+2. [ ] **Migration ausrollen:** bestätigte Runbooks, Schedules, Identitäten und Berechtigungen in Test migrieren; anschließend nach erfolgreichem Test Prod migrieren.
+3. [ ] **Abnahme und Abschaltung:** Runbook-Ausführung, Schedule, Logs, Diagnostik und Least-Privilege-RBAC nachweisen; alte Automation-Subscription erst nach fachlicher Abnahme und Freigabe stilllegen.
 
 ### Projektübersicht
 
@@ -248,6 +256,8 @@ flowchart LR
 - ✅ Service-Namensmapping `configuration` / `conf` ergänzt; Management-Ressourcen verwenden dadurch das bestehende CAF3-Management-Modul und das `conf`-Namensschema.
 - ✅ Aufrufe verwenden das Projekt `AZ_Capabilities`, die gemeinsame VNG-DevOps-AppMgmt-Gruppe sowie die bestehenden Hub-PEP-, Key-Vault-PEP-, Maintenance- und zentralen Logging-Inputs.
 - ⚠️ `AZ_Configuration` erstellt selbst `azurerm_monitor_diagnostic_setting.soc_activity_logs`; die neuen CAF3-Management-Aufrufe übergeben ebenfalls das SOC-Event-Hub-Ziel. Vor Apply prüfen, ob beide Einstellungen dieselben Activity Logs routen und dadurch doppelte SOC-Ereignisse entstehen; Ownership und gewünschte Zuständigkeit bestätigen.
+- ⛔ **Plan-Blocker (08.10.2026):** Test-Plan scheitert an verwaisten Monitoring-Ressourcen im Terraform-State. Der State verlangt die inzwischen entfernten Provider-Aliase `azurerm.monitoring_test` und `azurerm.monitoring_prod` für bereits gespeicherte Monitoring-Management-Ressourcen. Das ist kein Configuration-Subscription-ID-Fehler. Aliase/Module nur nach Entscheidung zur Ownership wiederherstellen; bei alleiniger Provider-Wiederherstellung kann Terraform Destroy für verwaiste Objekte planen. Bis zum State-/Ownership-Abgleich keinen Apply ausführen.
+- ℹ️ Die im Plan protokollierten `retention_policy`-Deprecation-Warnungen sind separat und nicht die Ursache des fehlgeschlagenen Plans.
 - ⏳ Test-/Prod-Pläne nach Einbindung ausführen und prüfen. Ein Test-Pipeline-Lauf folgt dem vorhandenen Management-Muster und verwendet für die Aliase die Sandbox/Test-Subscription; nur der Prod-Pipeline-Lauf adressiert die beiden echten Configuration-Subscriptions.
 
 ### CAF3-Management-Plan vom 07.10.2026 11:09
