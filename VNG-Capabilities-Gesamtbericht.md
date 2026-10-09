@@ -102,7 +102,7 @@ Plan: 9 to add, 0 to change, 0 to destroy
 |---|---|---|
 | Neue Configuration-Subscriptions und Naming Convention | `Az_CAF_Level3_Subscriptions/service-capabilities.tf` definiert `conf_test` und `conf_prod`; die bestätigten IDs sind Test `8fa4baf5-e809-4e19-8b37-e5c533359bce`, Prod `28e3a0c9-9b3e-46b1-8d61-c86fa87002ca`. `AZ_Configuration` nutzt `configuration`/`conf`; die neuen CAF3-Management-Aufrufe verwenden ebenfalls `conf`. | ✅ Definitionen/IDs vorhanden; Apply- und Ablösenachweis offen |
 | Azure DevOps Projekt und Repository | Das Subscription-Repo deklariert das Projekt `AZ_Capabilities` und das Repository `AZ_Configuration`; das Ziel-Repo enthält Test-/Prod-Pipelines mit `AZ_Infrastructure/AZ_Pipeline`. | ✅ Code vorhanden; Service-Connection-, Variable-Group- und Pipeline-Berechtigungen noch verifizieren |
-| Landing-Zone-Basis: Netzwerk, Peering, Policies, RBAC, Private Connectivity | CAF3-Management-Aufrufe für Test/Prod sind vorhanden. Ein `configuration`-Spoke ist in `AZ_CAF_Level3_Spokes` noch nicht vorhanden. `AZ_Configuration/spoke.tf` liest VNet/Subnet und `management.tf` liest Management-Ressourcen nur bei `landing_zone_provisioned = true`; der Default bleibt `false`. | ⏳ Spoke und Abhängigkeiten fehlen; Gate erst nach erfolgreichem Rollout aktivieren |
+| Landing-Zone-Basis: Netzwerk, Peering, Policies, RBAC, Private Connectivity | CAF3-Management-Aufrufe sowie Single-VNet-Wrapper und Test-/Prod-Root-Dateien sind vorbereitet. Die Root-Dateien enthalten bewusst IPAM-Platzhalter und sind damit noch nicht plan-/apply-fähig. `AZ_Configuration/spoke.tf` liest VNet/Subnet; `management.tf` liest Management-Ressourcen nur bei `landing_zone_provisioned = true` (Default `false`). | 🟡 Struktur vorbereitet; CIDRs/IPAM und Deployment offen |
 | Basisdienste der Ziel-Subscription | `AZ_Configuration/main.tf` erstellt App-RG, User-Assigned Identity, Automation Account und Account-Diagnostics; die SOC-Activity-Log-Diagnostic-Setting ist ebenfalls definiert. | 🟡 Ziel-Basis codiert; Deployment/Ownership verifizieren |
 | Bestehende Automation Accounts, Runbooks und Schedules | Das Quell-Repo enthält `AA_APPREG` sowie ein App-Registration-Expiry-Runbook (`App_reg_monitoring`) mit täglichem Schedule. Im Ziel-Repo gibt es derzeit keinen Runbook- oder Schedule-Code. | ⏳ Inventur und Migration fehlen |
 | Technische Service Accounts und Berechtigungen | Das Ziel erzeugt eine User-Assigned Identity. Eine vollständige Zuordnung der bisherigen Identitäten, Secrets und Rollen ist nicht nachgewiesen; das Quell-Repo nutzt zudem eine System-Assigned Identity am alten Automation Account. | ⏳ Identitäten/RBAC inventarisieren, Zielrollen least-privilege zuweisen und testen |
@@ -118,11 +118,12 @@ Plan: 9 to add, 0 to change, 0 to destroy
 3. [ ] **Migrationsmatrix erstellen:** für jeden gefundenen Bestandteil Ziel, verantwortliches Team, Abhängigkeiten, Geheimnisquelle und Testnachweis festlegen. AppReg-Expiry-Runbook und täglicher Schedule sind im Quellcode belegt; Shared Keys dürfen nicht als Klartext übernommen werden.
 4. [ ] **ADO-Betrieb verifizieren:** Service Connections `Terraform-test`/`Terraform-prod`, Subscription-Zuordnung, Pipeline-Autorisierung, Variable Groups und Zugriff auf `AZ_Infrastructure/AZ_Pipeline` bestätigen.
 5. [ ] **SOC-Logging-Ownership entscheiden:** `AZ_Configuration` und CAF3 Management definieren beide Activity-Log-Weiterleitung zum SOC Event Hub. Festlegen, welches System Eigentümer der Subscription-Diagnostic-Setting ist, um Doppelrouten zu vermeiden.
-6. [ ] **Cutover vorbereiten:** Abnahmekriterien, Rückfallplan, Verantwortliche und Voraussetzungen für die spätere Stilllegung der alten Automation-Subscription vereinbaren. Ansible bleibt ein separates Zielbild; es ist derzeit nicht implementiert.
+6. [ ] **CIDRs/IPAM klären:** IPAM-freigegebene Test-/Prod-CIDRs in `spoke-configuration-test.tf` und `spoke-configuration-prod.tf` eintragen, Platzhalter entfernen und erst danach Pläne erstellen.
+7. [ ] **Cutover vorbereiten:** Abnahmekriterien, Rückfallplan, Verantwortliche und Voraussetzungen für die spätere Stilllegung der alten Automation-Subscription vereinbaren. Ansible bleibt ein separates Zielbild; es ist derzeit nicht implementiert.
 
 #### Nach Deployment des Configuration-Spokes
 
-1. [ ] **Landing Zone vervollständigen:** Configuration-Spoke in `AZ_CAF_Level3_Spokes` deployen; CIDR/IPAM, Peering, Routen, Firewall/NSG, Policies, RBAC und Private Connectivity prüfen. `landing_zone_provisioned` bis zum erfolgreichen Spoke-Rollout `false` lassen.
+1. [ ] **Landing Zone vervollständigen:** den vorbereiteten Ein-VNet-Wrapper mit freigegebenen Test-/Prod-Root-Aufrufen versehen, planen und deployen; Peering, Routen, Firewall/NSG, Policies, RBAC und Private Connectivity prüfen. `landing_zone_provisioned` bis zum erfolgreichen Spoke-Rollout `false` lassen.
 2. [ ] **Migration ausrollen:** bestätigte Runbooks, Schedules, Identitäten und Berechtigungen in Test migrieren; anschließend nach erfolgreichem Test Prod migrieren.
 3. [ ] **Abnahme und Abschaltung:** Runbook-Ausführung, Schedule, Logs, Diagnostik und Least-Privilege-RBAC nachweisen; alte Automation-Subscription erst nach fachlicher Abnahme und Freigabe stilllegen.
 
@@ -150,7 +151,7 @@ flowchart LR
     Identity["Identity"]
     Connectivity["Connectivity / Hub"]
     CAFManagement["AZ_CAF_Level3_Management\nManagement-RG, Logging, KV, TF-Backend, RBAC"]
-    CAFSpokes["AZ_CAF_Level3_Spokes\nConfiguration-Spoke fehlt noch"]
+    CAFSpokes["AZ_CAF_Level3_Spokes\nSingle-VNet-Wrapper + Root-Dateien vorbereitet\nCIDR-Platzhalter offen"]
   end
 
   subgraph targets["Capability Landing Zones"]
@@ -293,3 +294,5 @@ Plan: 66 to add, 0 to change, 0 to destroy
 - **07.10.2026:** Fehler „Unsupported argument“ in den Monitoring-Management-Aufrufen behoben; optionale Reuse-Flags wurden anschließend zugunsten der separaten `mg`-Namensvariante entfernt.
 - **06.10.2026:** CAF3 Monitoring-Validate-Fehler behoben: Test/Prod-Root-Aufrufe übergeben `hub_network.firewall_private_ip_address`, passend zum Wrapper-Schema (zuvor falscher Key `firewallprivateIP`). Editor-Diagnostik anschließend fehlerfrei.
 - **08.10.2026:** VNGIA-228 gegen AZ_Configuration, AZ_Automation, Subscription-, ADO- und CAF3-Code abgeglichen; Acceptance-Matrix, priorisierte Restaufgaben und Mermaid-Projektübersicht ergänzt. Runbook-/RBAC-Migration, Configuration-Spoke, Pipeline-Validierung und Decommissioning bleiben offen.
+- **08.10.2026:** Ein-VNet-Wrapper `spokes/configuration` mit Kauzimon-Modulstruktur vorbereitet; keine CIDRs erfunden, Test-/Prod-Root-Aufrufe bleiben bis zur IPAM-Freigabe offen. Firewall-Regeln bleiben ohne fachliche Freigabe leer.
+- **08.10.2026:** `spoke-configuration-test.tf` und `spoke-configuration-prod.tf` als Root-Gerüste ergänzt. Die Netzwerkwerte sind explizite IPAM-Platzhalter und müssen vor Terraform-Plan/Apply ersetzt werden.
