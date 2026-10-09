@@ -1,6 +1,7 @@
 # VNG — Capabilities-Migration: Gesamtbericht (lebendes Dokument)
 
 > Wird laufend aktualisiert, sobald neue Fortschritte vorliegen. Letztes Update: **08.10.2026**
+> Wird laufend aktualisiert, sobald neue Fortschritte vorliegen. Letztes Update: **09.10.2026**
 
 ---
 
@@ -9,8 +10,10 @@
 | Ticket | Thema | Status | Nächster Schritt |
 |---|---|---|---|
 | [VNGIA-227](#vngia-227--az_tooling--az_capabilities-acr--compute-gallery) | Shared-Subscription → AZ_Capabilities (ACR + Compute Gallery) | 🔄 Plan validiert, Apply ausstehend | Pipeline erneut laufen lassen (Timeout war transient) |
-| [VNGIA-228](#vngia-228--automation--az_configuration) | Automation-Subscription → AZ_Configuration | ⛔ Plan durch verwaiste Monitoring-Provider-Aliase blockiert | Monitoring-State-Ownership klären, dann Configuration-Test-/Prod-Plan |
-| [VNGIA-347](#vngia-347--adoc-projekte-auf-zentrales-modul-umstellen) | 4 ADO-Projekte auf `module_azure_devops` umstellen | 📋 Nicht begonnen | Terraform-Code für Cluster/Autotrader/Fileshare/Pentaho schreiben |
+| [VNGIA-228](#vngia-228--automation--az_configuration) | Automation-Subscription → AZ_Configuration | ⛔ CAF3-Management-Apply durch vorhandene Defender-/SOC-/ADO-Ressourcen und Backend-403 blockiert | Ownership/State und Backend-Zugriff klären, dann getrennte Pläne |
+| [VNGIA-228](#vngia-228--automation--az_configuration) | Automation-Subscription → AZ_Configuration | ⛔ CAF3-Management-Apply durch vorhandene Ressourcen/Ownership und Backend-403 blockiert | Defender/SOC/ADO-State und Storage-Zugriff klären, dann getrennte Test-/Prod-Pläne |
+| [VNGIA-347](#vngia-347--adoc-projekte-auf-zentrales-modul-umstellen) | ADO-Projekte auf `module_azure_devops` umstellen | ✅ Abgeschlossen (Nutzerbestätigung; Code auf v0.6.1 geprüft) | Keine offenen Aufgaben |
+| [VNGIA-347](#vngia-347--adoc-projekte-auf-zentrales-modul-umstellen) | ADO-Projekte auf `module_azure_devops` umstellen | ✅ Abgeschlossen (Nutzerbestätigung; Code auf v0.6.1 geprüft) | Keine offenen Aufgaben |
 | [VNGIA-488](#vngia-488--az_monitoring-repo-migration) | AZ_Monitoring Repo-Migration (Git-Historie) | ✅ Migration fertig, Pipeline-Test offen | Pipeline testen, Variable Groups ggf. anlegen |
 
 ---
@@ -113,7 +116,7 @@ Plan: 9 to add, 0 to change, 0 to destroy
 
 #### Jetzt vorbereiten (Spoke-unabhängig)
 
-1. [ ] **Management-Plan-Blocker klären:** Terraform meldet verwaiste Monitoring-State-Objekte mit den entfernten Provider-Aliasen `monitoring_test`/`monitoring_prod`. Ownership mit dem Team klären und den State-/Provider-Zustand kontrolliert bereinigen; bis dahin keinen Apply ausführen.
+1. [ ] **CAF3-Management-Apply-Blocker klären:** Apply vom 08.10. scheiterte an bereits vorhandenen Defender-/Sentinel-Ressourcen, SOC-Diagnostic-Settings, ADO-Service-Connections und fehlendem Zugriff auf `terraform-plans`-Container. Ownership/State-Import und Storage-Berechtigungen abstimmen; bis dahin keinen Apply wiederholen.
 2. [ ] **Altbestand aufnehmen:** Quell-Subscription und Repo auf Automation Accounts, Runbooks, Schedules, Variablen/Connections, Managed Identities, Service Principals, Role Assignments und Renovate-Ressourcen prüfen; zusätzlich Live-Inventar gegen Terraform-Code abgleichen.
 3. [ ] **Migrationsmatrix erstellen:** für jeden gefundenen Bestandteil Ziel, verantwortliches Team, Abhängigkeiten, Geheimnisquelle und Testnachweis festlegen. AppReg-Expiry-Runbook und täglicher Schedule sind im Quellcode belegt; Shared Keys dürfen nicht als Klartext übernommen werden.
 4. [ ] **ADO-Betrieb verifizieren:** Service Connections `Terraform-test`/`Terraform-prod`, Subscription-Zuordnung, Pipeline-Autorisierung, Variable Groups und Zugriff auf `AZ_Infrastructure/AZ_Pipeline` bestätigen.
@@ -145,6 +148,7 @@ flowchart LR
   end
 
   PipelineTemplate["AZ_Infrastructure / AZ_Pipeline"]
+  AdoProjectModule["module_azure_devops v0.6.1\nVNGIA-347 abgeschlossen"]
   SubscriptionIaC["Az_CAF_Level3_Subscriptions\nconf_test / conf_prod + ADO-Projekt/Repos"]
 
   subgraph foundation["Platform Foundation"]
@@ -165,7 +169,8 @@ flowchart LR
   OldMonitoring -. "VNGIA-488" .-> RepoMonitoring
   SubscriptionIaC --> TestSub
   SubscriptionIaC --> ProdSub
-  SubscriptionIaC --> ado
+  SubscriptionIaC --> AdoProjectModule
+  AdoProjectModule --> ado
   ado --> RepoConfig
   ado --> RepoCaps
   ado --> RepoMonitoring
@@ -186,6 +191,14 @@ flowchart LR
 ---
 
 ## VNGIA-347 — ADO-Projekte auf zentrales Modul umstellen
+## VNGIA-347 — ADO-Projekte auf zentrales Modul umstellen
+
+**Repo:** `Az_CAF_Level3_Subscriptions`  
+**Status:** ✅ Abgeschlossen laut Nutzerbestätigung; die Service-Dateien verwenden `module_azure_devops` v0.6.1.
+
+- ✅ Cluster, Autotrader, Fileshare, Pentaho, AVD-Access und ETRM auf das zentrale Modul umgestellt.
+- ✅ Bestehende Projekte per `import`/`moved`-Blöcken an die Modul-Ressourcen angebunden.
+- ✅ Keine offenen Tasks für VNGIA-347 gemeldet.
 
 **Repo:** `Az_CAF_Level3_Subscriptions`
 **Betroffene Services:** Cluster, Autotrader, Fileshare, Pentaho (kein Modul) · AVD-Access, ETRM (Modul vorhanden, aber veraltete Version)
