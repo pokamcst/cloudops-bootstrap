@@ -253,6 +253,24 @@ flowchart LR
 
 **Nächster sicherer Schritt:** State auf Teil-Erstellungen prüfen. Danach ADO-Endpoint-Modell festlegen, dem tatsächlich verwendeten Pipeline-Principal `Storage Blob Data Contributor` auf den State-Konten gewähren und Agent→Private-Endpoint-DNS/HTTPS prüfen. Anschließend getrennte Pläne ausführen und sicherstellen, dass keine unerwarteten Destroy-Aktionen entstehen.
 
+### Monitoring-Migration: CAF Level 4 nach CAF Level 3 (Romeo / Timo)
+
+**Zielbild:** CAF Level 3 ist der einzige Terraform-Eigentümer für zentrales Monitoring, Alert-Routing und die vereinbarte Defender-/Sentinel-Konfiguration der Monitoring-Subscription. Die entsprechenden Definitionen werden aus CAF Level 4 (`AC Monitoring`) entfernt, damit keine doppelten Ressourcen oder Alert-Routen entstehen. Service Connections werden ebenfalls zentral im CAF3-Kontext verwaltet bzw. dort eingebunden.
+
+**Aktueller Zwischenstand:** CAF3 überspringt Defender/Sentinel für `service = "mon"` und deaktiviert SOC-Activity-Logs in den Monitoring-Test-/Prod-Aufrufen. Diese Schutzmaßnahmen vermeiden derzeit Duplikate, sind aber noch nicht das gewünschte Zielbild, in dem CAF3 Monitoring zentral verwaltet. Nicht entfernen, bevor die Level-4-Ownership geprüft und der CAF3-Plan vorbereitet ist.
+
+#### Vorgehen
+
+1. [ ] **Bestand und Ownership erfassen:** In `AC Monitoring` und CAF3 je Umgebung alle Defender-/Sentinel-Einstellungen, Alert-Regeln und -Empfänger, Diagnoseeinstellungen, Event-Hub-Routen und dazugehörigen Service Connections aufnehmen. Für jede Azure-Ressource Terraform-Adresse, Subscription, Resource ID und State festhalten. Tatsächliche Azure-Ressourcen mit beiden States abgleichen.
+2. [ ] **Service-Connection-Modell festlegen:** Im ADO-Projekt `AZ_Capabilities` für `Terraform-test` und `Terraform-prod` jeweils Ziel-Subscription, Service-Principal/Object ID, Workload-Federation-Issuer/Subject, Pipeline-Berechtigungen und Nutzungsumfang verifizieren. Pro Endpoint genau einen Terraform-Eigentümer bestimmen. Vorhandene Endpoints entweder zentral weiterverwenden und in den CAF3-State übernehmen/importieren oder fehlende Endpoints dort neu anlegen. Da das CAF3-Modul derzeit Namen aus Umgebung/Tier fest bildet, vor einem Neu-Anlegen prüfen, ob mehrere Management-Aufrufe denselben Namen erzeugen; keine Endpoints doppelt in verschiedenen States verwalten.
+3. [ ] **CAF3-Zielkonfiguration vorbereiten:** In CAF3 die gewünschten Defender-/Sentinel- und SOC-/Alert-Routen für Test aktivieren. Dabei festlegen, welche Ressource tatsächlich Alert-Routing konfiguriert und welches zentrale Ziel (Workspace/Event Hub/Action Group) verwendet wird. Vorhandene CAF3-Ausnahmen für `mon` nur im Rahmen dieses Schritts anpassen; keine zweite Diagnostic Setting oder Connector-Konfiguration neben der bestehenden L4-Ressource anlegen.
+4. [ ] **Test-Plan und Ownership-Übergabe:** Einen CAF3-Test-Plan erstellen und alle Creates, Updates und Deletes einzeln gegen den Bestand prüfen. Bestehende Ressourcen nicht durch Löschen aus L4 unabsichtlich in Azure entfernen: Falls dieselben Azure-Objekte weiterbestehen sollen, Ownership kontrolliert per State-Transfer/Import auf CAF3 überführen. Anschließend L4-Test-Plan prüfen; er darf dieselben Ressourcen nicht mehr verwalten.
+5. [ ] **Testen und Abnahme:** Test-Pipeline mit der vorgesehenen Service Connection ausführen. Nachweisen, dass Defender/Sentinel wie vereinbart aktiv ist, Alerts genau einmal am richtigen Ziel ankommen, keine doppelten SOC-Ereignisse entstehen und CAF3 die Ressourcen im nächsten Plan ohne unerwartete Änderungen erkennt.
+6. [ ] **Prod-Rollout:** Erst nach dokumentierter Test-Abnahme denselben Ablauf für Prod durchführen. CAF3-Prod-Plan und L4-Prod-Plan getrennt prüfen; Apply nur nach expliziter Freigabe.
+7. [ ] **Abschluss dokumentieren:** AC-Monitoring-Konfiguration aus CAF Level 4 entfernen bzw. dort nicht mehr verwalten, Service-Connection-Eigentümer und Subscription-Zuordnung dokumentieren und den Report nach erfolgreichem Test-/Prod-Nachweis aktualisieren.
+
+**Abnahmekriterien:** Pro Ressource genau ein Terraform-Eigentümer; pro gewünschtem Alert genau eine aktive Route; CAF3-Test und anschließend CAF3-Prod verwalten die zentrale Konfiguration; keine unerwarteten Deletes in beiden Plänen; Pipelines verwenden die geprüften zentralen Service Connections.
+
 ### CAF3-Management-Onboarding AZ_Configuration (08.10.2026)
 
 - ✅ Test-/Prod-Aufrufe in `AZ_CAF_Level3_Management` ergänzt; Subscription-IDs aus der Subscription-Übersicht: Test `8fa4baf5-e809-4e19-8b37-e5c533359bce`, Prod `28e3a0c9-9b3e-46b1-8d61-c86fa87002ca`.
@@ -299,3 +317,4 @@ Plan: 66 to add, 0 to change, 0 to destroy
 - **08.10.2026:** Ein-VNet-Wrapper `spokes/configuration` mit Kauzimon-Modulstruktur vorbereitet; keine CIDRs erfunden, Test-/Prod-Root-Aufrufe bleiben bis zur IPAM-Freigabe offen. Firewall-Regeln bleiben ohne fachliche Freigabe leer.
 - **08.10.2026:** `spoke-configuration-test.tf` und `spoke-configuration-prod.tf` als Root-Gerüste ergänzt. Die Netzwerkwerte sind explizite IPAM-Platzhalter und müssen vor Terraform-Plan/Apply ersetzt werden.
 - **09.10.2026:** CAF3 Monitoring-Apply-Fehler analysiert; SOC-Doppelroute für Monitoring durch `disable_soc_logs = true` und Defender/Sentinel-Duplikate durch servicebezogene Modulbedingung adressiert. ADO-Service-Connection-Ownership und Backend-403 bleiben zu klären; VNGIA-347 gemäß Nutzerbestätigung als abgeschlossen markiert.
+- **12.10.2026:** Gestuftes Vorgehen für die Monitoring-Ownership-Migration von CAF Level 4 (`AC Monitoring`) nach CAF Level 3 dokumentiert: Bestandsaufnahme, zentrale Service-Connection-Ownership, Test-Übergabe, Alert-/Defender-Abnahme und anschließender Prod-Rollout. Noch keine Migration oder Apply dadurch ausgeführt.
