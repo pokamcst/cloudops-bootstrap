@@ -1,6 +1,5 @@
 # VNG — Capabilities-Migration: Gesamtbericht (lebendes Dokument)
 
-> Wird laufend aktualisiert, sobald neue Fortschritte vorliegen. Letztes Update: **08.10.2026**
 > Wird laufend aktualisiert, sobald neue Fortschritte vorliegen. Letztes Update: **09.10.2026**
 
 ---
@@ -10,9 +9,7 @@
 | Ticket | Thema | Status | Nächster Schritt |
 |---|---|---|---|
 | [VNGIA-227](#vngia-227--az_tooling--az_capabilities-acr--compute-gallery) | Shared-Subscription → AZ_Capabilities (ACR + Compute Gallery) | 🔄 Plan validiert, Apply ausstehend | Pipeline erneut laufen lassen (Timeout war transient) |
-| [VNGIA-228](#vngia-228--automation--az_configuration) | Automation-Subscription → AZ_Configuration | ⛔ CAF3-Management-Apply durch vorhandene Defender-/SOC-/ADO-Ressourcen und Backend-403 blockiert | Ownership/State und Backend-Zugriff klären, dann getrennte Pläne |
-| [VNGIA-228](#vngia-228--automation--az_configuration) | Automation-Subscription → AZ_Configuration | ⛔ CAF3-Management-Apply durch vorhandene Ressourcen/Ownership und Backend-403 blockiert | Defender/SOC/ADO-State und Storage-Zugriff klären, dann getrennte Test-/Prod-Pläne |
-| [VNGIA-347](#vngia-347--adoc-projekte-auf-zentrales-modul-umstellen) | ADO-Projekte auf `module_azure_devops` umstellen | ✅ Abgeschlossen (Nutzerbestätigung; Code auf v0.6.1 geprüft) | Keine offenen Aufgaben |
+| [VNGIA-228](#vngia-228--automation--az_configuration) | Automation-Subscription → AZ_Configuration | ⛔ CAF3-Management-Apply durch ADO-Endpoint-Ownership und Backend-403 blockiert | Endpoint-Modell festlegen; Blob-RBAC und Private-Endpoint-Zugriff prüfen |
 | [VNGIA-347](#vngia-347--adoc-projekte-auf-zentrales-modul-umstellen) | ADO-Projekte auf `module_azure_devops` umstellen | ✅ Abgeschlossen (Nutzerbestätigung; Code auf v0.6.1 geprüft) | Keine offenen Aufgaben |
 | [VNGIA-488](#vngia-488--az_monitoring-repo-migration) | AZ_Monitoring Repo-Migration (Git-Historie) | ✅ Migration fertig, Pipeline-Test offen | Pipeline testen, Variable Groups ggf. anlegen |
 
@@ -116,13 +113,14 @@ Plan: 9 to add, 0 to change, 0 to destroy
 
 #### Jetzt vorbereiten (Spoke-unabhängig)
 
-1. [ ] **CAF3-Management-Apply-Blocker klären:** Apply vom 08.10. scheiterte an bereits vorhandenen Defender-/Sentinel-Ressourcen, SOC-Diagnostic-Settings, ADO-Service-Connections und fehlendem Zugriff auf `terraform-plans`-Container. Ownership/State-Import und Storage-Berechtigungen abstimmen; bis dahin keinen Apply wiederholen.
+1. [ ] **CAF3-Management-Apply-Blocker klären:** State/Teilerstellungen nach dem fehlgeschlagenen Apply prüfen. Für Monitoring `disable_soc_logs = true` beibehalten und im Plan prüfen, dass kein `soc_activity_logs[0]` entsteht. Die Defender-`count`-Bedingung im Management-Modul für `service = "mon"` auf `var.caf_environment == "prod" && var.general.service != "mon" ? 1 : 0` ändern; im Plan auf unerwartete Destroys prüfen. Bis ADO-/Storage-Blocker geklärt sind, keinen Apply wiederholen.
 2. [ ] **Altbestand aufnehmen:** Quell-Subscription und Repo auf Automation Accounts, Runbooks, Schedules, Variablen/Connections, Managed Identities, Service Principals, Role Assignments und Renovate-Ressourcen prüfen; zusätzlich Live-Inventar gegen Terraform-Code abgleichen.
 3. [ ] **Migrationsmatrix erstellen:** für jeden gefundenen Bestandteil Ziel, verantwortliches Team, Abhängigkeiten, Geheimnisquelle und Testnachweis festlegen. AppReg-Expiry-Runbook und täglicher Schedule sind im Quellcode belegt; Shared Keys dürfen nicht als Klartext übernommen werden.
-4. [ ] **ADO-Betrieb verifizieren:** Service Connections `Terraform-test`/`Terraform-prod`, Subscription-Zuordnung, Pipeline-Autorisierung, Variable Groups und Zugriff auf `AZ_Infrastructure/AZ_Pipeline` bestätigen.
-5. [ ] **SOC-Logging-Ownership entscheiden:** `AZ_Configuration` und CAF3 Management definieren beide Activity-Log-Weiterleitung zum SOC Event Hub. Festlegen, welches System Eigentümer der Subscription-Diagnostic-Setting ist, um Doppelrouten zu vermeiden.
-6. [ ] **CIDRs/IPAM klären:** IPAM-freigegebene Test-/Prod-CIDRs in `spoke-configuration-test.tf` und `spoke-configuration-prod.tf` eintragen, Platzhalter entfernen und erst danach Pläne erstellen.
-7. [ ] **Cutover vorbereiten:** Abnahmekriterien, Rückfallplan, Verantwortliche und Voraussetzungen für die spätere Stilllegung der alten Automation-Subscription vereinbaren. Ansible bleibt ein separates Zielbild; es ist derzeit nicht implementiert.
+4. [ ] **ADO-Service-Connection-Ownership entscheiden:** `modules/subscription_permissions/main.tf` hat aktuell keinen Root-Parameter für den Namen und erzeugt fest `Terraform-test` bzw. `Terraform-prod`. Entscheiden: vorhandene Endpoints zentral weiterverwenden (Subscription-Ziel und Principal prüfen, Endpoint im Terraform-State genau einmal verwalten) oder das Modul auf eindeutige servicebezogene Namen umstellen und Pipeline-Referenzen mitändern. Keine gleichen Endpoints in mehrere States importieren.
+5. [ ] **Terraform-Backend-Zugriff herstellen:** Object ID der tatsächlich vom Pipeline-Schritt `AzureCLI@2` verwendeten `serviceArm`-Identität ermitteln; dieser Identität `Storage Blob Data Contributor` auf `montfstatetest`/`montfstateprod` vergeben. Zusätzlich VMSS-Agent-Netzpfad, private DNS-Auflösung und HTTPS/443 zum Blob Private Endpoint prüfen. Public Network Access nicht als Schnellfix aktivieren.
+6. [ ] **SOC-Logging-Ownership entscheiden:** `AZ_Configuration` und CAF3 Management definieren beide Activity-Log-Weiterleitung zum SOC Event Hub. Festlegen, welches System Eigentümer der Subscription-Diagnostic-Setting ist, um Doppelrouten zu vermeiden.
+7. [ ] **CIDRs/IPAM klären:** IPAM-freigegebene Test-/Prod-CIDRs in `spoke-configuration-test.tf` und `spoke-configuration-prod.tf` eintragen, Platzhalter entfernen und erst danach Pläne erstellen.
+8. [ ] **Cutover vorbereiten:** Abnahmekriterien, Rückfallplan, Verantwortliche und Voraussetzungen für die spätere Stilllegung der alten Automation-Subscription vereinbaren. Ansible bleibt ein separates Zielbild; es ist derzeit nicht implementiert.
 
 #### Nach Deployment des Configuration-Spokes
 
@@ -191,34 +189,13 @@ flowchart LR
 ---
 
 ## VNGIA-347 — ADO-Projekte auf zentrales Modul umstellen
-## VNGIA-347 — ADO-Projekte auf zentrales Modul umstellen
 
 **Repo:** `Az_CAF_Level3_Subscriptions`  
-**Status:** ✅ Abgeschlossen laut Nutzerbestätigung; die Service-Dateien verwenden `module_azure_devops` v0.6.1.
+**Status:** ✅ Abgeschlossen laut Nutzerbestätigung; Codevergleich bestätigt `module_azure_devops` v0.6.1.
 
-- ✅ Cluster, Autotrader, Fileshare, Pentaho, AVD-Access und ETRM auf das zentrale Modul umgestellt.
-- ✅ Bestehende Projekte per `import`/`moved`-Blöcken an die Modul-Ressourcen angebunden.
-- ✅ Keine offenen Tasks für VNGIA-347 gemeldet.
-
-**Repo:** `Az_CAF_Level3_Subscriptions`
-**Betroffene Services:** Cluster, Autotrader, Fileshare, Pentaho (kein Modul) · AVD-Access, ETRM (Modul vorhanden, aber veraltete Version)
-
-### Status
-
-| Service | Modul eingebunden? | Import/Moved? | Version | Status |
-|---|---|---|---|---|
-| Cluster | ❌ | ❌ | – | 📋 Nicht begonnen |
-| Autotrader | ❌ | ❌ | – | 📋 Nicht begonnen |
-| Fileshare | ❌ | ❌ | – | 📋 Nicht begonnen |
-| Pentaho | ❌ | ❌ | – | 📋 Nicht begonnen |
-| AVD-Access | ✅ | ✅ (`moved`) | v0.5.0 (veraltet) | ⚠️ Versions-Upgrade auf v0.6.1 offen |
-| ETRM | ✅ | ✅ (`import`) | v0.4.0 (veraltet) | ⚠️ Versions-Upgrade auf v0.6.1 offen |
-
-### Nächste Schritte
-
-- [ ] Je Service: Projekt-ID ermitteln, Modul-Block + `import` ergänzen, alten `resource "azuredevops_project"` entfernen
-- [ ] AVD-Access & ETRM auf `v0.6.1` heben, Breaking Changes prüfen (`prevent_destroy` entfernt in v0.6.1)
-- [ ] `terraform plan` je Service verifizieren: kein Replace/Destroy
+- ✅ Cluster, Autotrader, Fileshare, Pentaho, AVD-Access und ETRM verwenden das zentrale Modul.
+- ✅ Bestehende Projekte sind per `import`-/`moved`-Blöcken an die Modul-Ressourcen angebunden.
+- ✅ Keine offenen Aufgaben für VNGIA-347 gemeldet.
 
 ---
 
@@ -251,7 +228,7 @@ flowchart LR
 - ✅ Management-Root-Aufrufe für Test und Prod ergänzt, analog zum CAF3-Tooling-Muster.
 - ✅ Monitoring-Management-Aufrufe folgen der Kauzimon-Konvention: `general.service` und `service_short` verwenden `mon`, ohne Sonder-Tier.
 - ✅ CAF3 erstellt dadurch getrennte Ressourcen mit `mon_*`-/`mon-log-*`-Namen; AZ_Monitoring behält seine `monitoring_*`-Ressourcen. Der Logging-Modulblock `workspace_resource_id = azurerm_log_analytics_workspace.LOG_ANALYTICS.id` bleibt unverändert.
-- ✅ Für Monitoring-Aufrufe Defender- und SOC-Activity-Log-Verwaltung im CAF3-Management-Modul deaktiviert, da AZ_Monitoring diese Bereiche bereits verwaltet.
+- ⚠️ Defender-for-Cloud bleibt im CAF3-Management-Modul für Prod aktiv; der Apply meldet Konflikte mit bereits vorhandenen Security-Center-/Sentinel-Ressourcen. SOC-Activity-Logs sind in Monitoring Test/Prod jetzt explizit deaktiviert, um die vorhandene AZ_Monitoring-Event-Hub-Diagnostic-Setting nicht zu duplizieren; Plan-Verifikation steht aus.
 - ✅ `AZ_CAF_Level3_Spokes` nutzt dieselben Monitoring-IDs als zentrale Ziele für Logs und Action Groups.
 - ✅ Monitoring-Wrapper unter `spokes/monitoring` mit `main.tf`, `variables.tf` und `firewall-rules.tf` ergänzt; Test/Prod-Root-Dateien verwenden den Wrapper ohne `count`, entsprechend dem bestehenden CAF3-Spoke-Muster.
 - ✅ Nach Rückmeldung des Chefs benötigt Monitoring kein separates App-VNet. Test verwendet ausschließlich `10.186.104.0/24`, Prod ausschließlich `10.186.108.0/24`; die zuvor vorgeschlagenen App-CIDRs `10.186.110.0/24` und `10.186.109.0/24` wurden aus der Konfiguration entfernt.
@@ -264,13 +241,25 @@ flowchart LR
 - ⚠️ Das verwendete CAF3-Modul `virtual_network_spoke` erstellt weiterhin eine NSG mit `AllowAllIn` und `AllowAllOut`. Diese NSG-Regeln müssen vor Apply separat bewertet/angepasst werden; die Firewall-Policy-Regeln ersetzen die NSG-Prüfung nicht.
 - Entscheidung: AZ_Monitoring behält die bestehenden `monitoring_rg_mngt_*`-Resource Groups und `monitoring-log-*`-Workspaces. CAF3 Management erhält separate `mon_rg_mngt_*`-Resource Groups und `mon-log-*`-Workspaces; damit gibt es keine doppelte Terraform-Ownership desselben Azure-Objekts.
 
+### CAF3-Management-Apply Monitoring (08.10.2026 15:14)
+
+**Ergebnis:** Apply fehlgeschlagen. Terraform-Apply ist nicht transaktional; vor einem Retry State und Azure-Ressourcen prüfen, weil einzelne Aktionen bereits erfolgreich gewesen sein können.
+
+- **Defender/Sentinel:** Der Apply meldete Sentinel-Connector-Duplikate und bereits vorhandene Security-Center-Pricing-, Settings-, Workspace- und Contact-Ressourcen. CAF3 Management überspringt Defender/Sentinel jetzt für `service = "mon"` über die bestehende Service-Ausprägung; es wurde keine neue Variable eingeführt. Im nächsten Plan prüfen, dass diese Ressourcen nicht mehr angelegt werden.
+- **SOC-Activity-Logs:** Der Apply meldete 409, weil AZ_Monitoring denselben Event-Hub-Sink bereits für die Kategorie `Security` nutzt. Korrektur gesetzt: `disable_soc_logs = true` in den Monitoring-Test-/Prod-Aufrufen. Im nächsten Plan verifizieren, dass CAF3 die doppelten Activity-Log-Diagnostic-Settings überspringt. Für AZ_Configuration bleibt die Ownership-Frage separat offen, da dieses Repo selbst `soc_activity_logs` definiert.
+- **Azure DevOps:** `modules/subscription_permissions/main.tf` setzt `service_endpoint_name` fest auf `Terraform-${environment}` (bei leerem `tier`); der Management-Aufruf kann den Namen nicht konfigurieren. `Terraform-test`/`Terraform-prod` existieren bereits. Endpoint-Zielsubscription und Principal prüfen; entweder zentral einmalig verwalten und für die benötigten Subscriptions berechtigen, oder Modul um eindeutige Endpoint-Namen erweitern und Pipelines anpassen. Nicht denselben Endpoint parallel in mehreren States importieren.
+- **Terraform Backend:** `modules/terraform_backend/main.tf` erstellt `montfstatetest`/`montfstateprod` mit `public_network_access_enabled = false` und `network_rules.default_action = "Deny"`; der Container wird über `azurerm.spoke` erstellt. Der verwendete Pipeline-Principal braucht `Storage Blob Data Contributor` auf dem jeweiligen Konto. Zusätzlich müssen VMSS-Agent, Private Endpoint, DNS-Auflösung und HTTPS/443 zusammenpassen. Public Network Access nicht als Schnellfix öffnen.
+- **Deprecation:** `retention_policy` bei Diagnostic Settings erzeugt viele Warnungen, ist aber nicht die Ursache des Apply-Abbruchs.
+
+**Nächster sicherer Schritt:** State auf Teil-Erstellungen prüfen. Danach ADO-Endpoint-Modell festlegen, dem tatsächlich verwendeten Pipeline-Principal `Storage Blob Data Contributor` auf den State-Konten gewähren und Agent→Private-Endpoint-DNS/HTTPS prüfen. Anschließend getrennte Pläne ausführen und sicherstellen, dass keine unerwarteten Destroy-Aktionen entstehen.
+
 ### CAF3-Management-Onboarding AZ_Configuration (08.10.2026)
 
 - ✅ Test-/Prod-Aufrufe in `AZ_CAF_Level3_Management` ergänzt; Subscription-IDs aus der Subscription-Übersicht: Test `8fa4baf5-e809-4e19-8b37-e5c533359bce`, Prod `28e3a0c9-9b3e-46b1-8d61-c86fa87002ca`.
 - ✅ Service-Namensmapping `configuration` / `conf` ergänzt; Management-Ressourcen verwenden dadurch das bestehende CAF3-Management-Modul und das `conf`-Namensschema.
 - ✅ Aufrufe verwenden das Projekt `AZ_Capabilities`, die gemeinsame VNG-DevOps-AppMgmt-Gruppe sowie die bestehenden Hub-PEP-, Key-Vault-PEP-, Maintenance- und zentralen Logging-Inputs.
 - ⚠️ `AZ_Configuration` erstellt selbst `azurerm_monitor_diagnostic_setting.soc_activity_logs`; die neuen CAF3-Management-Aufrufe übergeben ebenfalls das SOC-Event-Hub-Ziel. Vor Apply prüfen, ob beide Einstellungen dieselben Activity Logs routen und dadurch doppelte SOC-Ereignisse entstehen; Ownership und gewünschte Zuständigkeit bestätigen.
-- ⛔ **Plan-Blocker (08.10.2026):** Test-Plan scheitert an verwaisten Monitoring-Ressourcen im Terraform-State. Der State verlangt die inzwischen entfernten Provider-Aliase `azurerm.monitoring_test` und `azurerm.monitoring_prod` für bereits gespeicherte Monitoring-Management-Ressourcen. Das ist kein Configuration-Subscription-ID-Fehler. Aliase/Module nur nach Entscheidung zur Ownership wiederherstellen; bei alleiniger Provider-Wiederherstellung kann Terraform Destroy für verwaiste Objekte planen. Bis zum State-/Ownership-Abgleich keinen Apply ausführen.
+- ℹ️ Ein früherer Validate-/Plan-Lauf meldete fehlende Monitoring-Provider-Aliase für State-Einträge. Im Apply vom 08.10. wurden Azure-Ressourcen erreicht; der aktuelle Blocker sind die dort dokumentierten Ownership-/Duplikat- und Backend-Zugriffsfehler.
 - ℹ️ Die im Plan protokollierten `retention_policy`-Deprecation-Warnungen sind separat und nicht die Ursache des fehlgeschlagenen Plans.
 - ⏳ Test-/Prod-Pläne nach Einbindung ausführen und prüfen. Ein Test-Pipeline-Lauf folgt dem vorhandenen Management-Muster und verwendet für die Aliase die Sandbox/Test-Subscription; nur der Prod-Pipeline-Lauf adressiert die beiden echten Configuration-Subscriptions.
 
@@ -309,3 +298,4 @@ Plan: 66 to add, 0 to change, 0 to destroy
 - **08.10.2026:** VNGIA-228 gegen AZ_Configuration, AZ_Automation, Subscription-, ADO- und CAF3-Code abgeglichen; Acceptance-Matrix, priorisierte Restaufgaben und Mermaid-Projektübersicht ergänzt. Runbook-/RBAC-Migration, Configuration-Spoke, Pipeline-Validierung und Decommissioning bleiben offen.
 - **08.10.2026:** Ein-VNet-Wrapper `spokes/configuration` mit Kauzimon-Modulstruktur vorbereitet; keine CIDRs erfunden, Test-/Prod-Root-Aufrufe bleiben bis zur IPAM-Freigabe offen. Firewall-Regeln bleiben ohne fachliche Freigabe leer.
 - **08.10.2026:** `spoke-configuration-test.tf` und `spoke-configuration-prod.tf` als Root-Gerüste ergänzt. Die Netzwerkwerte sind explizite IPAM-Platzhalter und müssen vor Terraform-Plan/Apply ersetzt werden.
+- **09.10.2026:** CAF3 Monitoring-Apply-Fehler analysiert und dokumentiert (Defender/Sentinel-Duplikate, SOC-409, vorhandene ADO-Service-Connections, Backend-403); `disable_soc_logs = true` in Monitoring Test/Prod zur Vermeidung doppelter Activity-Log-Routen gesetzt. VNGIA-347 gemäß Nutzerbestätigung als abgeschlossen markiert.
