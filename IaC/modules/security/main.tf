@@ -1,33 +1,5 @@
-# Variables
-variable "resource_group_name" {
-  description = "Name of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-}
-
-variable "virtual_network_id" {
-  description = "ID of the virtual network"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "Map of subnet IDs"
-  type        = map(string)
-}
-
-variable "tags" {
-  description = "Tags to apply to resources"
-  type        = map(string)
-}
+# Data source for current client configuration
+data "azurerm_client_config" "current" {}
 
 # Log Analytics Workspace
 resource "azurerm_log_analytics_workspace" "main" {
@@ -44,11 +16,11 @@ resource "azurerm_key_vault" "main" {
   name                = "kv-photo-${var.environment}"
   location            = var.location
   resource_group_name = var.resource_group_name
-  tenant_id          = data.azurerm_client_config.current.tenant_id
-  sku_name           = "standard"
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  sku_name            = "standard"
   tags                = var.tags
 
-  purge_protection_enabled = true
+  purge_protection_enabled   = true
   soft_delete_retention_days = 7
 
   network_acls {
@@ -85,7 +57,7 @@ resource "azurerm_private_endpoint" "key_vault" {
     name                           = "psc-kv-${var.environment}"
     private_connection_resource_id = azurerm_key_vault.main.id
     is_manual_connection           = false
-    subresource_names             = ["vault"]
+    subresource_names              = ["vault"]
   }
 
   private_dns_zone_group {
@@ -137,38 +109,14 @@ resource "azurerm_key_vault_access_policy" "aks" {
 
 # RBAC Role Assignment for Key Vault - Key Vault Secrets User
 resource "azurerm_role_assignment" "aks_kv_secrets" {
-  scope              = azurerm_key_vault.main.id
+  scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id       = azurerm_user_assigned_identity.aks.principal_id
+  principal_id         = azurerm_user_assigned_identity.aks.principal_id
 }
 
 # RBAC Role Assignment for current user (for Terraform operations)
 resource "azurerm_role_assignment" "current_user_kv" {
-  scope              = azurerm_key_vault.main.id
+  scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Administrator"
-  principal_id       = data.azurerm_client_config.current.object_id
+  principal_id         = data.azurerm_client_config.current.object_id
 }
-
-# Data source for current client configuration
-data "azurerm_client_config" "current" {}
-
-# Outputs
-output "key_vault_id" {
-  value = azurerm_key_vault.main.id
-}
-
-output "key_vault_uri" {
-  value = azurerm_key_vault.main.vault_uri
-}
-
-output "log_analytics_workspace_id" {
-  value = azurerm_log_analytics_workspace.main.id
-}
-
-output "aks_identity_id" {
-  value = azurerm_user_assigned_identity.aks.id
-}
-
-output "aks_identity_principal_id" {
-  value = azurerm_user_assigned_identity.aks.principal_id
-} 

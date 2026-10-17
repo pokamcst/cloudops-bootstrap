@@ -100,10 +100,7 @@ jobs:
         for module in modules/*; do
           if [ -d "$module" ]; then
             echo "Testing module: $module"
-            cd $module
-            terraform init
-            terraform validate
-            cd ../..
+            (cd "$module" && terraform init -backend=false && terraform validate)
           fi
         done
       continue-on-error: true

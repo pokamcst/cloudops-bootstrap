@@ -104,3 +104,25 @@ tags = {
   CostCenter   = "engineering"
   Owner        = "platform-team"
 }
+
+# ============================================================================
+# FinOps Configuration
+# ============================================================================
+
+# Budget Configuration
+finops_monthly_budget    = 1000   # Monthly budget per resource group (EUR)
+finops_budget_currency   = "EUR"
+finops_alert_thresholds  = [50, 75, 90, 100, 110]  # % thresholds (>100 = forecasted)
+finops_alert_emails      = ["finops@example.com", "platform-team@example.com"]
+
+# Subscription Budget
+finops_enable_subscription_budget = true
+finops_subscription_budget        = 5000  # Total subscription budget (EUR)
+
+# Cost Governance
+finops_enable_tagging_policy  = true
+finops_required_tags          = ["Environment", "CostCenter", "Owner", "Project", "ManagedBy"]
+
+# Alerts
+finops_enable_anomaly_alerts  = true
+finops_enable_advisor_alerts  = true

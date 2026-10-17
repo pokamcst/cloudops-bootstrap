@@ -1,17 +1,13 @@
-locals {
-  acr_name = replace("${var.environment}kustomeracr", "-", "")
-}
-
 resource "azurerm_container_registry" "main" {
   name                = local.acr_name
   resource_group_name = var.resource_group_name
   location            = var.location
   sku                 = var.acr_sku
   admin_enabled       = var.admin_enabled
-  
+
   # public_network_access_enabled only supported with Premium SKU
   public_network_access_enabled = var.acr_sku == "Premium" ? var.public_network_access_enabled : true
-  
+
   tags = var.tags
 }
 

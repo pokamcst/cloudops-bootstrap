@@ -1,39 +1,3 @@
-# Variables
-variable "resource_group_name" {
-  description = "Name of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "Map of subnet IDs"
-  type        = map(string)
-}
-
-variable "private_endpoint_subnet_id" {
-  description = "Subnet ID for private endpoints"
-  type        = string
-}
-
-variable "vnet_id" {
-  description = "Virtual Network ID for private endpoints"
-  type        = string
-}
-
-variable "tags" {
-  description = "Tags to apply to resources"
-  type        = map(string)
-}
-
 # Storage Account
 resource "azurerm_storage_account" "main" {
   name                     = "stphotosharing${var.environment}"
@@ -41,7 +5,7 @@ resource "azurerm_storage_account" "main" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "GRS"
-  min_tls_version         = "TLS1_2"
+  min_tls_version          = "TLS1_2"
   tags                     = var.tags
 }
 
@@ -85,7 +49,7 @@ resource "azurerm_private_endpoint" "blob" {
     name                           = "psc-blob-${var.environment}"
     private_connection_resource_id = azurerm_storage_account.main.id
     is_manual_connection           = false
-    subresource_names             = ["blob"]
+    subresource_names              = ["blob"]
   }
 
   private_dns_zone_group {
@@ -142,33 +106,3 @@ resource "azurerm_storage_management_policy" "main" {
     }
   }
 }
-
-# Outputs
-output "storage_account_id" {
-  value = azurerm_storage_account.main.id
-}
-
-output "storage_account_name" {
-  value = azurerm_storage_account.main.name
-}
-
-output "blob_storage_primary_endpoint" {
-  value = azurerm_storage_account.main.primary_blob_endpoint
-}
-
-output "blob_storage_primary_connection_string" {
-  value     = azurerm_storage_account.main.primary_blob_connection_string
-  sensitive = true
-}
-
-output "photos_container_name" {
-  value = azurerm_storage_container.photos.name
-}
-
-output "thumbnails_container_name" {
-  value = azurerm_storage_container.thumbnails.name
-}
-
-output "temp_container_name" {
-  value = azurerm_storage_container.temp.name
-} 

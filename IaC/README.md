@@ -1,24 +1,24 @@
 # Infrastructure as Code (IaC)
 
-Professional Terraform configuration for Kustomer platform infrastructure deployment on Azure.
+Production-grade Terraform configuration for Azure cloud infrastructure deployment with built-in FinOps, security, and compliance.
 
 ## Directory Structure
 
 ```
 IaC/
 ├── README.md                    # This file
-├── .gitignore                   # Git ignore for Terraform
-├── providers.tf                 # Provider configuration
+├── providers.tf                 # Provider configuration & backend
 ├── variables.tf                 # Input variables with validation
 ├── locals.tf                    # Local values and naming conventions
-├── main.tf                      # Root module configuration
+├── main.tf                      # Root module orchestration
 ├── outputs.tf                   # Output values
-├── .terraform.lock.hcl          # Provider lock file
+├── terraform.tfvars.example     # Example variable values
 ├── modules/                     # Terraform modules
 │   ├── acr/                     # Azure Container Registry
 │   ├── aks/                     # Azure Kubernetes Service
 │   ├── databases/               # Cosmos DB & PostgreSQL
-│   ├── monitoring/              # Application Insights & Monitoring
+│   ├── finops/                  # FinOps — Budgets, Alerts, Policies, Cost Exports
+│   ├── monitoring/              # Application Insights & Alerting
 │   ├── networking/              # Virtual Network & Subnets
 │   ├── security/                # Key Vault & Security
 │   └── storage/                 # Azure Storage Account
@@ -154,6 +154,17 @@ postgres_storage_mb            = 32768
 enable_private_endpoints       = true
 enable_diagnostic_settings     = true
 log_retention_days             = 30
+
+# FinOps Configuration
+finops_monthly_budget          = 1000
+finops_budget_currency         = "EUR"
+finops_alert_emails            = ["finops@example.com"]
+finops_alert_thresholds        = [50, 75, 90, 100, 110]
+finops_enable_subscription_budget = true
+finops_subscription_budget     = 5000
+finops_enable_tagging_policy   = true
+finops_enable_anomaly_alerts   = true
+finops_enable_advisor_alerts   = true
 ```
 
 ## Modules
@@ -200,6 +211,17 @@ log_retention_days             = 30
 - File shares
 - Private endpoint support
 
+### FinOps (Cloud Financial Operations)
+- **Budget Management** — Resource Group and Subscription budgets with auto-alerts at 50/75/90/100/110%
+- **Cost Anomaly Detection** — AI-based anomaly alerts via Azure Cost Management
+- **Tag Governance** — Azure Policy enforcement for mandatory cost-tracking tags
+- **Tag Inheritance** — Auto-inherit CostCenter, Environment, Project from Resource Group
+- **Daily Cost Exports** — Automated ActualCost exports to Storage Account
+- **Advisor Alerts** — Notifications for new cost optimization recommendations
+- **Environment Multipliers** — dev=1×, staging=1.5×, prod=3× budget scaling
+
+See [FINOPS_CONCEPT.md](../FINOPS_CONCEPT.md) and [FINOPS_PRODUCTION_GUIDE.md](../FINOPS_PRODUCTION_GUIDE.md) for details.
+
 ## Outputs
 
 After deployment, retrieve outputs:
@@ -215,6 +237,9 @@ Key outputs include:
 - Storage account details
 - Cosmos DB endpoint
 - PostgreSQL FQDN
+- FinOps budget ID and effective monthly budget
+- FinOps anomaly alert ID
+- FinOps cost export storage account
 
 ## Best Practices
 

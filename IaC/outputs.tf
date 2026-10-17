@@ -129,6 +129,27 @@ output "log_analytics_workspace_id" {
   value       = module.security.log_analytics_workspace_id
 }
 
+# FinOps Outputs
+output "finops_budget_id" {
+  description = "Resource Group budget ID"
+  value       = module.finops.resource_group_budget_id
+}
+
+output "finops_effective_monthly_budget" {
+  description = "Effective monthly budget after environment multiplier"
+  value       = module.finops.effective_monthly_budget
+}
+
+output "finops_anomaly_alert_id" {
+  description = "Cost anomaly alert ID"
+  value       = module.finops.cost_anomaly_alert_id
+}
+
+output "finops_storage_account" {
+  description = "FinOps cost export storage account"
+  value       = module.finops.finops_storage_account_name
+}
+
 # Environment Summary
 output "deployment_summary" {
   description = "Summary of the deployment"

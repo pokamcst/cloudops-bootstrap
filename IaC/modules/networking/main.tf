@@ -1,29 +1,3 @@
-# Variables
-variable "resource_group_name" {
-  description = "Name of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-}
-
-variable "address_space" {
-  description = "Address space for the virtual network"
-  type        = list(string)
-}
-
-variable "tags" {
-  description = "Tags to apply to resources"
-  type        = map(string)
-}
-
 # Virtual Network
 resource "azurerm_virtual_network" "vnet" {
   name                = "vnet-photo-platform-${var.environment}"
@@ -119,32 +93,3 @@ resource "azurerm_subnet_network_security_group_association" "app" {
   subnet_id                 = azurerm_subnet.app.id
   network_security_group_id = azurerm_network_security_group.app_nsg.id
 }
-
-# Outputs
-output "vnet_id" {
-  value = azurerm_virtual_network.vnet.id
-}
-
-output "vnet_name" {
-  value = azurerm_virtual_network.vnet.name
-}
-
-output "aks_subnet_id" {
-  value = azurerm_subnet.aks.id
-}
-
-output "pe_subnet_id" {
-  value = azurerm_subnet.pe.id
-}
-
-output "app_subnet_id" {
-  value = azurerm_subnet.app.id
-}
-
-output "subnet_ids" {
-  value = {
-    aks = azurerm_subnet.aks.id
-    pe  = azurerm_subnet.pe.id
-    app = azurerm_subnet.app.id
-  }
-} 
